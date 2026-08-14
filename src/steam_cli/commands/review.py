@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 import httpx
 import requests
 import typer
@@ -30,6 +32,12 @@ _BANNED_WORDS = (
     "spic",
     "kike",
 )
+# Word-boundary matching: plain substring checks also matched banned words
+# embedded in ordinary words (e.g. "retard" inside "retardant", "spic" inside
+# "despicable"/"conspicuous"), rejecting clean reviews as false positives.
+_BANNED_WORDS_RE = re.compile(
+    r"\b(" + "|".join(re.escape(word) for word in _BANNED_WORDS) + r")\b", re.IGNORECASE
+)
 
 
 def filter_review_text(text: str) -> str | None:
@@ -38,10 +46,8 @@ def filter_review_text(text: str) -> str | None:
         return "review is empty"
     if len(stripped) < _MIN_REVIEW_LEN:
         return f"review is too short ({len(stripped)} characters; minimum {_MIN_REVIEW_LEN})"
-    lowered = stripped.lower()
-    for word in _BANNED_WORDS:
-        if word in lowered:
-            return "review contains a disallowed word"
+    if _BANNED_WORDS_RE.search(stripped):
+        return "review contains a disallowed word"
     return None
 
 
