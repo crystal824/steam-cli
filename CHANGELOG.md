@@ -2,9 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+### Bug Fixes
+
+- Add ruff and mypy to dev dependencies for CI
+
+### Build & CI
+
+- Upgrade actions to Node 24 (checkout v7, setup-python v7, gh-release v3), add dependabot
+
 ### Chores
 
 - Merge remote initial commit (PRD + LICENSE)
+- Add git-cliff changelog automation
+- Add project engineering tooling (CI, lint/type checks, pre-commit, contributing docs, lockfile)
 
 ### Documentation
 
