@@ -10,6 +10,11 @@ Some commands (search, app, price, news, achievements) work with just a Web API 
 
 Verify with `steam auth status` (shows "Web API key: set" and whether it is valid).
 
+**Optional: IsThereAnyDeal key for price history.** `steam price` shows the
+historical low only when `STEAM_CLI_ITAD_KEY` is set (register at
+isthereanydeal.com → developer). Without it the CLI prints a hint instead of
+failing.
+
 ## Login session (layer ②/③)
 
 Write operations and personal reads need a login session:

@@ -26,7 +26,7 @@ Auth & status
 - `steam auth status` — current login + API-key state
 - `steam auth logout` — clear saved session
 - `steam auth set-key <key>` — store Web API key (read-only queries)
-- `steam auth refresh` — check / refresh session
+- `steam auth refresh` — check session validity
 - `steam auth revoke-all` — emergency wipe of all local credentials
 - `steam doctor` — probe availability of endpoints
 
@@ -35,6 +35,9 @@ Proxy (network fallback)
 - `steam config proxy show` — masked view
 - `steam config proxy test` — verify the proxy reaches Steam
 - `steam config proxy unset`
+
+Price history
+- `steam price <appid|name>` shows the historical low only when the env var `STEAM_CLI_ITAD_KEY` is set (IsThereAnyDeal developer key); without it the CLI prints a hint instead.
 
 Store & discovery
 - `steam search <query> [--limit N] [--type game|dlc|software|all]`

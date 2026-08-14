@@ -12,10 +12,11 @@ safety policy.
 | Area | Commands |
 |------|----------|
 | Auth | `steam auth login / status / logout / set-key / refresh / revoke-all`, `steam doctor` |
+| Proxy | `steam config proxy set / show / test / unset` |
 | Store | `steam search`, `app`, `price`, `news`, `radar` |
 | Library | `steam library list`, `library has` |
 | Wishlist | `steam wishlist list / add / remove / on-sale` |
-| Activation | `steam activate <cdk> [--batch file] [--dry-run]` |
+| Activation | `steam activate <cdk> [--batch file] [--dry-run] [--yes]` |
 | Reviews | `steam review post`, `review list` |
 | Friends | `steam friends list / playing / recently-played / invite-link`, `steam profile` |
 | Stats | `steam stats summary`, `stats game` |
@@ -47,7 +48,27 @@ steam auth login                       # one-time Steam Guard / captcha flow
 steam library list
 steam activate XXXXX-XXXXX-XXXXX
 steam wishlist add "Elden Ring"
+
+# Price history needs an IsThereAnyDeal developer key (optional)
+export STEAM_CLI_ITAD_KEY=<itad_key>
+steam price 2358720                    # includes historical low
 ```
+
+## Proxy
+
+Steam services can be unstable in some regions. Configure one proxy that
+applies to **every** request (Web API, sessions, store, community):
+
+```bash
+steam config proxy set http://user:pass@127.0.0.1:7890   # full URL, or:
+steam config proxy set --host 127.0.0.1 --port 7890 --username u --password p
+steam config proxy test                                   # verify it reaches Steam
+steam config proxy show                                   # masked view
+steam config proxy unset
+```
+
+The proxy URL (credentials included) is stored in the OS keyring. Supported
+schemes: `http`, `https`, `socks4`, `socks5`, `socks5h`.
 
 ## Safety policy
 
@@ -81,6 +102,11 @@ Run `steam doctor` to probe endpoint availability.
 PYTHONPATH=src python3 -m steam_cli.main --help
 PYTHONPATH=src python3 -m pytest
 ```
+
+Testing principles: read-only features are safe to exercise against live
+endpoints; write operations (especially `activate`) are **never** run against
+the user's main account — use an isolated test account, and never run
+automated tests on a primary account. Prefer HTTP recording/playback for CI.
 
 ## Hermes Skill
 
