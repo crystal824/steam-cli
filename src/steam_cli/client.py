@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import re
 from functools import lru_cache
+from urllib.parse import quote
 
 import httpx
 from steam.webapi import WebAPI
@@ -39,7 +40,7 @@ def resolve_appid(term: str) -> int:
     try:
         with httpx.Client(timeout=10) as client:
             resp = client.get(
-                "https://steamcommunity.com/actions/SearchApps/" + term,
+                "https://steamcommunity.com/actions/SearchApps/" + quote(term, safe=""),
                 headers={"User-Agent": "Mozilla/5.0 (steam-cli/0.1)"},
             )
             resp.raise_for_status()
