@@ -35,6 +35,20 @@ def _fetch_players(client: SteamClient, steamids: list[str]) -> list[dict]:
     return data.get("response", {}).get("players", [])
 
 
+# GetPlayerSummaries field names, per Valve's docs -- NOT "loca<x>id".
+_PROFILE_DETAIL_FIELDS = (
+    ("realname", "Real name"),
+    ("loccountrycode", "Country"),
+    ("locstatecode", "State"),
+    ("loccityid", "City"),
+)
+
+
+def _profile_detail_lines(player: dict) -> list[tuple[str, str]]:
+    """(label, value) pairs for the optional profile fields that are present."""
+    return [(label, str(player[key])) for key, label in _PROFILE_DETAIL_FIELDS if player.get(key)]
+
+
 def _extract_invite_link(text: str) -> str | None:
     match = re.search(r"https://s\.team/p/[A-Za-z0-9_-]+", text)
     if match:
@@ -172,14 +186,8 @@ def register(app: typer.Typer) -> None:
         console.print(f"Profile: https://steamcommunity.com/profiles/{p.get('steamid', '')}")
         state = p.get("personastate", 0)
         console.print(f"Status: {'Online' if state else 'Offline'}")
-        for key, label in (
-            ("realname", "Real name"),
-            ("locacountryid", "Country"),
-            ("locastateid", "State"),
-            ("locacityid", "City"),
-        ):
-            if p.get(key):
-                console.print(f"{label}: {p[key]}")
+        for label, value in _profile_detail_lines(p):
+            console.print(f"{label}: {value}")
         if p.get("timecreated"):
             created = datetime.datetime.fromtimestamp(int(p["timecreated"]), datetime.UTC).strftime(
                 "%Y-%m-%d"
