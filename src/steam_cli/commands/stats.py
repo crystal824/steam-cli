@@ -40,9 +40,7 @@ def _owned_games(client: SteamClient) -> list[dict[str, Any]]:
 
 def _recently_played(client: SteamClient) -> list[dict[str, Any]]:
     try:
-        response = client.api.IPlayerService.GetRecentlyPlayedGames(
-            steamid=auth.require_steam_id()
-        )
+        response = client.api.IPlayerService.GetRecentlyPlayedGames(steamid=auth.require_steam_id())
     except (requests.RequestException, ValueError) as exc:
         raise NetworkError(detail=str(exc))
     return response.get("response", {}).get("games", [])
@@ -92,7 +90,7 @@ def game(appid: str) -> None:
 
     ts = owned.get("rtime_last_played") or 0
     try:
-        last = datetime.datetime.fromtimestamp(ts).strftime("%Y-%m-%d") if ts else "-"
+        last = datetime.datetime.fromtimestamp(ts, datetime.UTC).strftime("%Y-%m-%d") if ts else "-"
     except (OverflowError, OSError, ValueError):
         last = "-"
     console.print(f"{owned.get('name') or appid_int} ({appid_int})")

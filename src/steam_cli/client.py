@@ -7,7 +7,6 @@ import re
 from functools import lru_cache
 
 import httpx
-
 from steam.webapi import WebAPI
 
 from . import auth

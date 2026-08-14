@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import time
 from collections import Counter
+from typing import Any
 
 import httpx
 import requests
@@ -40,7 +41,7 @@ def _app_genres(appid: int) -> set[str]:
     return {g.get("description", "") for g in entry["data"].get("genres", [])}
 
 
-def _owned_games(api: object, steam_id: str) -> list[dict]:
+def _owned_games(api: Any, steam_id: str) -> list[dict]:
     try:
         resp = api.IPlayerService.GetOwnedGames(
             steamid=steam_id, include_appinfo=1, include_played_free_games=1
@@ -58,7 +59,7 @@ def _wishlist_appids(steam_id: str) -> list[int]:
             timeout=15,
         )
         resp.raise_for_status()
-        return [int(a) for a in resp.json().keys()]
+        return [int(a) for a in resp.json() if str(a).isdigit()]
     except (requests.RequestException, ValueError) as exc:
         raise NetworkError(detail=str(exc))
 
@@ -127,10 +128,10 @@ def register(app: typer.Typer) -> None:
         table.add_column("#")
         table.add_column("Name")
         table.add_column("Score")
-        for i, (appid, score) in enumerate(scored[:limit], start=1):
+        for i, (appid, sc) in enumerate(scored[:limit], start=1):
             try:
                 name = resolve_name(appid)
             except NetworkError:
                 name = str(appid)
-            table.add_row(str(i), name, str(score))
+            table.add_row(str(i), name, str(sc))
         console.print(table)

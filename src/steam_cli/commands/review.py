@@ -64,7 +64,9 @@ def register(app: typer.Typer) -> None:
             raise InvalidFormatError(reason)
         if dry_run:
             verdict = "recommended" if recommend else "not recommended"
-            console.print(f"[yellow]dry-run[/yellow] would post a '{verdict}' review for app {appid}:")
+            console.print(
+                f"[yellow]dry-run[/yellow] would post a '{verdict}' review for app {appid}:"
+            )
             console.print(f"  {text}")
             return
         sessionid = session.cookies.get("sessionid") or ""
@@ -118,9 +120,7 @@ def register(app: typer.Typer) -> None:
         reviews = data.get("reviews", [])
         if mine:
             steamid = auth.require_steam_id()
-            reviews = [
-                r for r in reviews if str(r.get("author", {}).get("steamid")) == steamid
-            ]
+            reviews = [r for r in reviews if str(r.get("author", {}).get("steamid")) == steamid]
         if not reviews:
             console.print("no reviews found")
             return

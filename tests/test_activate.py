@@ -3,10 +3,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-import pytest  # noqa: E402
+import pytest
 
-from steam_cli.commands.activate import _activate_key, _raise_for_result  # noqa: E402
-from steam_cli.errors import (  # noqa: E402
+from steam_cli.commands.activate import _activate_key, _raise_for_result
+from steam_cli.errors import (
     AlreadyActivatedError,
     EndpointUnavailableError,
     InvalidKeyError,
@@ -30,7 +30,9 @@ class FakeSession:
 
 
 def test_activate_already_activated():
-    session = FakeSession(200, "This product code has already been activated by a different account")
+    session = FakeSession(
+        200, "This product code has already been activated by a different account"
+    )
     assert _activate_key(session, "K", "s") == "already_activated"
 
 

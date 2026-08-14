@@ -82,9 +82,7 @@ def register(app: typer.Typer) -> None:
 
     @proxy_group.command("set")
     def proxy_set(
-        proxy_url: str = typer.Argument(
-            None, help="e.g. http://user:pass@127.0.0.1:7890"
-        ),
+        proxy_url: str = typer.Argument(None, help="e.g. http://user:pass@127.0.0.1:7890"),
         host: str = typer.Option(None, "--host", help="proxy host"),
         port: int = typer.Option(None, "--port", help="proxy port"),
         username: str = typer.Option(None, "--username", help="proxy user (optional)"),
@@ -135,9 +133,7 @@ def register(app: typer.Typer) -> None:
             console.print(f"[red]proxy test failed:[/red] {exc.__class__.__name__}: {exc}")
             raise typer.Exit(code=1)
         if resp.status_code == 200:
-            console.print(
-                f"[green]Proxy works[/green] ({_TEST_URL} -> HTTP {resp.status_code})"
-            )
+            console.print(f"[green]Proxy works[/green] ({_TEST_URL} -> HTTP {resp.status_code})")
         else:
             console.print(f"[red]proxy test failed:[/red] HTTP {resp.status_code}")
             raise typer.Exit(code=1)

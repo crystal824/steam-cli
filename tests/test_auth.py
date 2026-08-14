@@ -3,13 +3,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-import json  # noqa: E402
-from types import SimpleNamespace  # noqa: E402
+import json
+from types import SimpleNamespace
 
-import requests  # noqa: E402
-from steam.steamid import SteamID  # noqa: E402
+import requests
+from steam.steamid import SteamID
 
-from steam_cli import auth  # noqa: E402
+from steam_cli import auth
 
 
 class FakeKeyring:
@@ -77,7 +77,7 @@ def test_legacy_cookie_format_still_loads(monkeypatch):
 
 
 def test_status_cached_and_invalidated(monkeypatch):
-    fake = make_fixture(monkeypatch)
+    make_fixture(monkeypatch)
     first = auth.status()
     second = auth.status()
     assert first is second

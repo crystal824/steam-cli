@@ -3,15 +3,15 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-import pytest  # noqa: E402
+import pytest
 
-from steam_cli import auth  # noqa: E402
-from steam_cli.commands.config import (  # noqa: E402
+from steam_cli import auth
+from steam_cli.commands.config import (
     build_proxy_url,
     mask_proxy_url,
     validate_proxy_url,
 )
-from steam_cli.errors import InvalidFormatError  # noqa: E402
+from steam_cli.errors import InvalidFormatError
 
 
 class FakeKeyring:

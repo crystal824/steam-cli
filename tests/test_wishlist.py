@@ -4,7 +4,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 
-from steam_cli.commands.wishlist import _wishlist_modify  # noqa: E402
+from steam_cli.commands.wishlist import _wishlist_modify
 
 
 class FakeResponse:
@@ -25,10 +25,12 @@ class FakeSession:
 
 def test_wishlist_modify_sends_appid_and_sessionid():
     fs = FakeSession()
-    result = _wishlist_modify(fs, "https://store.steampowered.com/api/addtowishlist", 2358720, "sid123")
+    result = _wishlist_modify(
+        fs, "https://store.steampowered.com/api/addtowishlist", 2358720, "sid123"
+    )
     assert result == "ok"
     assert fs.last is not None
-    url, data = fs.last
+    _url, data = fs.last
     assert data == {"appid": 2358720, "sessionid": "sid123"}
 
 

@@ -14,11 +14,11 @@ from ..errors import NetworkError
 console = Console()
 
 
-def _format_ts(ts: float | int | None) -> str:
+def _format_ts(ts: float | None) -> str:
     if not ts:
         return "-"
     try:
-        return datetime.datetime.fromtimestamp(int(ts)).strftime("%Y-%m-%d %H:%M")
+        return datetime.datetime.fromtimestamp(int(ts), datetime.UTC).strftime("%Y-%m-%d %H:%M")
     except (OverflowError, OSError, ValueError):
         return str(ts)
 
@@ -34,12 +34,8 @@ def register(app: typer.Typer) -> None:
         steam_id = auth.require_steam_id()
         client = SteamClient()
         try:
-            player = client.api.ISteamUserStats.GetPlayerAchievements(
-                appid=appid, steamid=steam_id
-            )
-            glob = client.api.ISteamUserStats.GetGlobalAchievementPercentagesForApp(
-                gameid=appid
-            )
+            player = client.api.ISteamUserStats.GetPlayerAchievements(appid=appid, steamid=steam_id)
+            glob = client.api.ISteamUserStats.GetGlobalAchievementPercentagesForApp(gameid=appid)
         except (requests.RequestException, ValueError) as exc:
             raise NetworkError(detail=str(exc))
 

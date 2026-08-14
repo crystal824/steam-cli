@@ -32,11 +32,11 @@ def _get_json(url: str, params: dict | None = None) -> dict:
         raise NetworkError(detail=str(exc))
 
 
-def _format_ts(ts: float | int | None) -> str:
+def _format_ts(ts: float | None) -> str:
     if not ts:
         return "-"
     try:
-        return datetime.datetime.fromtimestamp(int(ts)).strftime("%Y-%m-%d")
+        return datetime.datetime.fromtimestamp(int(ts), datetime.UTC).strftime("%Y-%m-%d")
     except (OverflowError, OSError, ValueError):
         return str(ts)
 
@@ -131,12 +131,10 @@ def register(app: typer.Typer) -> None:
         hist = price_history(appid)
         if hist is not None and hist.get("historical_low") is not None:
             low = hist["historical_low"]
-            cur = hist.get("historical_low_currency") or ""
-            console.print(f"historical low: {low} {cur}".rstrip())
+            low_currency = hist.get("historical_low_currency") or ""
+            console.print(f"historical low: {low} {low_currency}".rstrip())
         elif not itad_available():
-            console.print(
-                "[dim]historical low unavailable; set STEAM_CLI_ITAD_KEY to enable[/dim]"
-            )
+            console.print("[dim]historical low unavailable; set STEAM_CLI_ITAD_KEY to enable[/dim]")
 
     @app.command()
     def news(appid: str, count: int = 5) -> None:

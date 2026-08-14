@@ -16,7 +16,6 @@ from pathlib import Path
 
 import keyring
 import requests
-
 from steam.webauth import WebAuth
 
 from .errors import NotAuthenticatedError
@@ -289,7 +288,7 @@ def is_session_valid() -> bool:
 def log_audit(command: str, target: str, result: str) -> None:
     import datetime
 
-    line = f"{datetime.datetime.now().isoformat()}\t{command}\t{target}\t{result}\n"
+    line = f"{datetime.datetime.now(datetime.UTC).isoformat()}\t{command}\t{target}\t{result}\n"
     with _audit_lock:
         _ensure_config_dir()
         with AUDIT_LOG.open("a", encoding="utf-8") as fh:

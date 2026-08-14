@@ -43,7 +43,7 @@ def _last_played(game: dict[str, Any]) -> str:
     if not ts:
         return "-"
     try:
-        return datetime.datetime.fromtimestamp(ts).strftime("%Y-%m-%d")
+        return datetime.datetime.fromtimestamp(ts, datetime.UTC).strftime("%Y-%m-%d")
     except (OverflowError, OSError, ValueError):
         return "-"
 

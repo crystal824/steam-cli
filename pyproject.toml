@@ -29,3 +29,23 @@ steam = "steam_cli.main:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+# BLE001/S110: catching broad exceptions around third-party (web) calls and
+# keyring cleanup is deliberate defensive code in this project.
+ignore = ["BLE001", "S110"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+no_implicit_optional = true
+check_untyped_defs = true
+warn_redundant_casts = true

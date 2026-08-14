@@ -7,7 +7,6 @@ import sys
 import requests
 import typer
 from rich.console import Console
-
 from steam.webauth import WebAuth
 
 from . import auth
@@ -62,7 +61,11 @@ def logout():
 
 
 @app.command("set-key")
-def set_key(web_api_key: str = typer.Argument(..., help="Web API key from https://steamcommunity.com/dev/apikey")):
+def set_key(
+    web_api_key: str = typer.Argument(
+        ..., help="Web API key from https://steamcommunity.com/dev/apikey"
+    ),
+):
     """Store a Web API key for read-only queries."""
     auth.set_api_key(web_api_key)
     console.print("Web API key saved.")
@@ -97,7 +100,7 @@ def doctor():
     run_doctor()
 
 
-from .commands import (  # noqa: E402
+from .commands import (
     achievements,
     activate,
     config,

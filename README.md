@@ -1,5 +1,9 @@
 # steam-cli
 
+[![CI](https://github.com/crystal824/steam-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/crystal824/steam-cli/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)](https://github.com/crystal824/steam-cli)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
 A safe, controllable Steam CLI for the [Hermes](https://agentskills.io) agent.
 
 `steam-cli` lets an agent operate a user's Steam account through natural
@@ -99,14 +103,23 @@ Run `steam doctor` to probe endpoint availability.
 ## Development
 
 ```bash
-PYTHONPATH=src python3 -m steam_cli.main --help
-PYTHONPATH=src python3 -m pytest
+pip install -e ".[dev]"     # 或：uv sync（使用 uv.lock 锁定版本）
+pre-commit install          # 提交前自动检查
+
+ruff check src tests        # 代码规范
+ruff format --check src tests
+mypy src                    # 类型检查
+PYTHONPATH=src python3 -m pytest -q
 ```
 
 Testing principles: read-only features are safe to exercise against live
 endpoints; write operations (especially `activate`) are **never** run against
 the user's main account — use an isolated test account, and never run
 automated tests on a primary account. Prefer HTTP recording/playback for CI.
+
+CI (GitHub Actions) runs `ruff` + `mypy` + `pytest` on every push; the
+`v*` tag release workflow generates the CHANGELOG and publishes a GitHub
+Release automatically. See `CONTRIBUTING.md` for details.
 
 ## Hermes Skill
 

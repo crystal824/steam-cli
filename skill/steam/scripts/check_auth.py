@@ -35,7 +35,7 @@ def main() -> int:
 
     try:
         from steam_cli import auth
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return _error(f"{exc.__class__.__name__}: {exc}")
 
     try:
@@ -51,7 +51,7 @@ def main() -> int:
         }
         print(json.dumps(result))
         return 0 if result["ok"] else 1
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return _error(f"{exc.__class__.__name__}: {exc}")
 
 

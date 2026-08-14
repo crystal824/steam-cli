@@ -132,16 +132,12 @@ def register(app: typer.Typer) -> None:
         try:
             sessionid = session.cookies.get("sessionid") or ""
             if refresh:
-                resp = session.post(
-                    INVITE_LINK_URL, data={"sessionid": sessionid}, timeout=15
-                )
+                resp = session.post(INVITE_LINK_URL, data={"sessionid": sessionid}, timeout=15)
             else:
                 resp = session.get(INVITE_LINK_URL, timeout=15)
             resp.raise_for_status()
         except requests.RequestException as exc:
-            raise EndpointUnavailableError(
-                detail=f"{exc}; this endpoint may have changed"
-            )
+            raise EndpointUnavailableError(detail=f"{exc}; this endpoint may have changed")
         link = _extract_invite_link(resp.text)
         if not link:
             raise EndpointUnavailableError(
@@ -185,7 +181,7 @@ def register(app: typer.Typer) -> None:
             if p.get(key):
                 console.print(f"{label}: {p[key]}")
         if p.get("timecreated"):
-            created = datetime.datetime.fromtimestamp(
-                int(p["timecreated"]), datetime.timezone.utc
-            ).strftime("%Y-%m-%d")
+            created = datetime.datetime.fromtimestamp(int(p["timecreated"]), datetime.UTC).strftime(
+                "%Y-%m-%d"
+            )
             console.print(f"Member since: {created}")

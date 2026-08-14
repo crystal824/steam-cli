@@ -4,10 +4,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 
-from steam_cli.client import resolve_appid  # noqa: E402
-from steam_cli.commands.activate import validate_cdk_format  # noqa: E402
-from steam_cli.commands.review import filter_review_text  # noqa: E402
-from steam_cli.errors import (  # noqa: E402
+from steam_cli.client import resolve_appid
+from steam_cli.commands.activate import validate_cdk_format
+from steam_cli.commands.review import filter_review_text
+from steam_cli.errors import (
     AlreadyActivatedError,
     InvalidFormatError,
 )

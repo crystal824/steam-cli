@@ -42,9 +42,7 @@ def _wishlist_data(session: requests.Session, steamid: str) -> dict:
 
 def _wishlist_modify(session: requests.Session, url: str, appid: int, sessionid: str) -> str:
     try:
-        resp = session.post(
-            url, data={"appid": appid, "sessionid": sessionid}, timeout=20
-        )
+        resp = session.post(url, data={"appid": appid, "sessionid": sessionid}, timeout=20)
     except requests.RequestException as exc:
         raise NetworkError(detail=str(exc))
     if resp.status_code == 403:
@@ -71,7 +69,9 @@ def register(app: typer.Typer) -> None:
         table.add_column("AppID")
         table.add_column("Name")
         for appid, info in data.items():
-            table.add_row(str(appid), info.get("name", str(appid)) if isinstance(info, dict) else str(info))
+            table.add_row(
+                str(appid), info.get("name", str(appid)) if isinstance(info, dict) else str(info)
+            )
         console.print(table)
 
     @group.command()

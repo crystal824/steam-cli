@@ -3,7 +3,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from steam_cli.utils import price  # noqa: E402
+from steam_cli.utils import price
 
 
 def test_itad_unavailable_without_key(monkeypatch):
