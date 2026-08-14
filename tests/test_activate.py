@@ -24,6 +24,7 @@ class FakeResponse:
 class FakeSession:
     def __init__(self, status_code=200, text=""):
         self.response = FakeResponse(status_code, text)
+        self.cookies = {"sessionid": "sid123"}
 
     def post(self, *args, **kwargs):
         return self.response
@@ -78,3 +79,24 @@ def test_raise_for_result_mapping():
 
 def test_raise_for_result_ok_noop():
     _raise_for_result("ok", "K")
+
+
+def test_activate_batch_logs_masked_key_not_raw_key(monkeypatch, tmp_path):
+    from steam_cli import auth
+    from steam_cli.commands.activate import _activate_batch, _mask_key
+
+    raw_key = "ABCDE-12345-ZYXWV"
+    batch_file = tmp_path / "keys.txt"
+    batch_file.write_text(raw_key + "\n")
+
+    logged: list[tuple[str, str, str]] = []
+    monkeypatch.setattr(auth, "require_session", lambda: FakeSession(200, "already own"))
+    monkeypatch.setattr(auth, "log_audit", lambda *args: logged.append(args))
+    monkeypatch.setattr("builtins.input", lambda *_: "y")  # in case confirm falls back to input
+
+    _activate_batch(str(batch_file), dry_run=False, yes=True)
+
+    assert len(logged) == 1
+    _command, target, _result = logged[0]
+    assert target == _mask_key(raw_key)
+    assert raw_key not in target
