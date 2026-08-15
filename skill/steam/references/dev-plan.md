@@ -56,7 +56,12 @@ Agent 能听懂并执行类似指令：
 ```
 steam-cli/                          # 独立 CLI 仓库
 ├── pyproject.toml
+├── MANIFEST.in
 ├── README.md
+├── docs/
+│   └── development.md              # 仓库级设计与开发文档
+├── scripts/
+│   └── build_skill.py               # 构建独立 Skill 归档
 ├── src/steam_cli/
 │   ├── __init__.py
 │   ├── main.py                     # typer 入口
@@ -74,9 +79,10 @@ steam-cli/                          # 独立 CLI 仓库
 │   └── utils/
 │       ├── price.py                # 价格 / 折扣 / 历史最低
 │       └── steamdb.py              # 可选第三方价格数据源（见 §9）
+├── skill/steam/                    # Skill 源文件，独立于 Python 包发布
 └── tests/
 
-~/.hermes/skills/steam/             # Hermes Skill
+~/.hermes/skills/steam/             # 解压 Skill 发布归档后的安装目录
 ├── SKILL.md                        # 主入口（触发描述 + 核心指令）
 ├── references/
 │   ├── api-map.md                  # 命令 ↔ 能力对照表（含技术分层标注）

@@ -111,16 +111,34 @@ mypy src                    # 类型检查
 PYTHONPATH=src python3 -m pytest -q
 ```
 
+## Release
+
+The Python CLI and Hermes Skill are released as separate artifacts. Install the
+release tooling and build both artifacts with:
+
+```bash
+python -m pip install build twine
+python -m build --outdir dist/python
+python scripts/build_skill.py --output-dir dist/skill
+python -m twine check dist/python/*
+```
+
+The installed Python package contains only the runtime code under `src/`; the
+Skill is published as `dist/skill/steam-skill-<version>.tar.gz`.
+
 Testing principles: read-only features are safe to exercise against live
 endpoints; write operations (especially `activate`) are **never** run against
 the user's main account — use an isolated test account, and never run
 automated tests on a primary account. Prefer HTTP recording/playback for CI.
 
-CI (GitHub Actions) runs `ruff` + `mypy` + `pytest` on every push; the
+CI (GitHub Actions) runs `ruff` + `mypy` + `pytest` and validates release
+artifacts on every push; the
 `v*` tag release workflow generates the CHANGELOG and publishes a GitHub
 Release automatically. See `CONTRIBUTING.md` for details.
 
 ## Hermes Skill
 
-The agent-facing Skill lives in [`skill/steam/`](skill/steam/). Install it to
-`~/.hermes/skills/steam/` to expose these capabilities to Hermes.
+The agent-facing Skill lives in
+[`skill/steam/`](https://github.com/crystal824/steam-cli/tree/main/skill/steam)
+and is released separately. Extract its archive to `~/.hermes/skills/steam/` to
+expose these capabilities to Hermes.

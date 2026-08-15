@@ -19,6 +19,20 @@ mypy src                    # 类型检查
 pytest -q                   # 测试
 ```
 
+## 发布
+
+版本号以 `pyproject.toml` 为唯一来源。发布前递进版本号并创建对应的
+`v<version>` 标签。发布构建会生成独立的 Python 包和 Hermes Skill 归档：
+
+```bash
+python -m pip install build twine
+make release-check
+```
+
+产物位于 `dist/python/` 和 `dist/skill/`，不要将构建产物提交到 Git。
+如果要同步发布到 PyPI，需要先配置 PyPI Trusted Publisher，再将仓库变量
+`PUBLISH_PYPI` 设置为 `true`。
+
 ## 提交规范
 
 提交信息使用 [Conventional Commits](https://www.conventionalcommits.org/)，类型前缀：

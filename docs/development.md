@@ -56,7 +56,12 @@ Agent 能听懂并执行类似指令：
 ```
 steam-cli/                          # 独立 CLI 仓库
 ├── pyproject.toml
+├── MANIFEST.in
 ├── README.md
+├── docs/
+│   └── development.md              # 仓库级设计与开发文档
+├── scripts/
+│   └── build_skill.py               # 构建独立 Skill 归档
 ├── src/steam_cli/
 │   ├── __init__.py
 │   ├── main.py                     # typer 入口
@@ -74,9 +79,10 @@ steam-cli/                          # 独立 CLI 仓库
 │   └── utils/
 │       ├── price.py                # 价格 / 折扣 / 历史最低
 │       └── steamdb.py              # 可选第三方价格数据源（见 §9）
+├── skill/steam/                    # Skill 源文件，独立于 Python 包发布
 └── tests/
 
-~/.hermes/skills/steam/             # Hermes Skill
+~/.hermes/skills/steam/             # 解压 Skill 发布归档后的安装目录
 ├── SKILL.md                        # 主入口（触发描述 + 核心指令）
 ├── references/
 │   ├── api-map.md                  # 命令 ↔ 能力对照表（含技术分层标注）
@@ -318,4 +324,4 @@ description: Operate the user's Steam account via steam-cli — activate CD keys
 **文档版本**：v0.2
 **变更摘要**：CDK 激活明确为纯网页会话方案（不做协议层），移除 gevent/SteamClient 依赖；新增好友快速邀请链接生成/刷新功能；移除家庭共享/借出状态查询；补充各命令的技术分层标注、CDK 格式校验修正、凭证存储与审计日志、批量操作节奏控制等安全细节。
 **适用 Hermes**：v0.15+（agentskills.io 标准）
-**维护建议**：把本文件放在 Skill 的 `references/dev-plan.md`，方便后续迭代时 Agent 自己查阅。
+**维护建议**：Skill 对外文档位于 `skill/steam/references/`；本文件是仓库级开发文档。

@@ -1,0 +1,16 @@
+include README.md
+include LICENSE
+include CHANGELOG.md
+recursive-include src/steam_cli *.py
+
+# The Python distribution does not contain development files or the separately
+# released Hermes Skill archive.
+prune tests
+prune docs
+prune skill
+prune scripts
+prune .github
+
+global-exclude *.patch
+global-exclude *.py[cod]
+global-exclude __pycache__/*
