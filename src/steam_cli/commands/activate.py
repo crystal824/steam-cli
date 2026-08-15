@@ -149,7 +149,7 @@ def register(app: typer.Typer) -> None:
         session = auth.require_session()
         sessionid = session.cookies.get("sessionid") or ""
         result = _activate_key(session, key, sessionid)
-        auth.log_audit("activate", key, result)
+        auth.log_audit("activate", _mask_key(key), result)
         if result == "ok":
             console.print(f"[green]Activated {_mask_key(key)}[/green]")
         else:
@@ -203,7 +203,7 @@ def _activate_batch(path: str, dry_run: bool, yes: bool) -> None:
     for k in valid:
         result = _activate_key(session, k, sessionid)
         rows.append((k, result))
-        auth.log_audit("activate", k, result)
+        auth.log_audit("activate", _mask_key(k), result)
         time.sleep(2)
 
     table = Table(title="Activation results")

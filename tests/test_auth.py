@@ -84,3 +84,17 @@ def test_status_cached_and_invalidated(monkeypatch):
     auth.set_api_key("testkey")
     third = auth.status()
     assert third is not first
+
+
+def test_log_audit_creates_file_with_owner_only_permissions(monkeypatch, tmp_path):
+    import stat
+
+    audit_log = tmp_path / "audit.log"
+    monkeypatch.setattr(auth, "CONFIG_DIR", tmp_path)
+    monkeypatch.setattr(auth, "AUDIT_LOG", audit_log)
+
+    auth.log_audit("activate", "ABCD-****-WXYZ", "ok")
+
+    mode = stat.S_IMODE(audit_log.stat().st_mode)
+    assert mode == 0o600
+    assert "ABCD-****-WXYZ" in audit_log.read_text()

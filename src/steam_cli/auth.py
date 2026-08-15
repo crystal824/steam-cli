@@ -286,12 +286,19 @@ def is_session_valid() -> bool:
 
 
 def log_audit(command: str, target: str, result: str) -> None:
+    """Append an audit entry. `target` must already be redacted by the caller
+    if it could contain a secret (e.g. a CD key) -- this function does not
+    mask anything itself."""
     import datetime
 
     line = f"{datetime.datetime.now(datetime.UTC).isoformat()}\t{command}\t{target}\t{result}\n"
     with _audit_lock:
         _ensure_config_dir()
-        with AUDIT_LOG.open("a", encoding="utf-8") as fh:
+        # Open with an explicit 0o600 mode (like _write_secret_fallback) so the
+        # log isn't left group/world-readable by the process umask -- it can
+        # contain account-identifying activity even when callers redact secrets.
+        fd = os.open(AUDIT_LOG, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+        with os.fdopen(fd, "a", encoding="utf-8") as fh:
             fh.write(line)
 
 

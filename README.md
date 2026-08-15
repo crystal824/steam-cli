@@ -33,8 +33,7 @@ pip install .
 steam --help
 ```
 
-Dependencies: `typer`, `rich`, `steam` (ValvePython), `httpx`, `beautifulsoup4`,
-`keyring`.
+Dependencies: `typer`, `rich`, `steam` (ValvePython), `httpx`, `keyring`.
 
 ## Quick start
 
