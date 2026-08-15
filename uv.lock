@@ -934,7 +934,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/9a/31/62ac25584988182de
 
 [[package]]
 name = "steam-cli"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },
