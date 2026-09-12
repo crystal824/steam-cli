@@ -27,15 +27,18 @@ jobs:
           expected="${TAG_VERSION#v}"
           actual="$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
           test "$expected" = "$actual"
-      - name: Use the latest changelog configuration
-        # The template lives on the default branch and only affects formatting, so a
-        # release of an older tag still picks up template fixes (and a re-published
-        # release gets the current layout instead of the one frozen in its tree).
+      - name: Use the latest changelog configuration and release notes
+        # Both live on the default branch and are tooling/documentation rather than
+        # released code: reading them from main means a re-published tag picks up the
+        # current template and the current notes, instead of whatever was frozen in
+        # its tree. That is also how a published release's notes get corrected --
+        # edit docs/releases/<tag>.md, re-push the tag, no API token needed.
         run: |
           set -euo pipefail
           git fetch --no-tags origin main
           git checkout FETCH_HEAD -- cliff.toml
-          echo "Using cliff.toml from $(git rev-parse --short FETCH_HEAD)"
+          git checkout FETCH_HEAD -- docs/releases 2>/dev/null || echo "::notice::docs/releases missing on main; falling back to the tagged tree"
+          echo "Using cliff.toml and docs/releases from $(git rev-parse --short FETCH_HEAD)"
 
       - name: Generate changelog
         id: git-cliff
