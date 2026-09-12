@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.3] - 2026-09-12
+
+### Documentation
+
+- **releases:** Document the release flow and how to fix a published release
+
+- **releases:** Bilingual release notes, read notes and changelog config from main
+
+- **releases:** Bilingual release notes (zh + en) as the convention
+
 ## [0.2.2] - 2026-09-12
 
 ### Documentation
