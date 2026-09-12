@@ -40,6 +40,9 @@ both halves equivalent; do not let one become a summary of the other.
 
 Keep them readable: they are the public face of the release, not a commit log.
 
+`v0.2.0` and `v0.2.1` predate this convention and keep English-only notes; their
+release pages are left as they are.
+
 ## Releasing
 
 1. write `docs/releases/<tag>.md` (bilingual)
