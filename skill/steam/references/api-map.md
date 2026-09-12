@@ -8,8 +8,8 @@ Each command is tagged with its technical layer:
 
 | Command | Capability | Layer |
 |---|---|---|
-| `steam auth set-key <key>` | store Web API key | ① |
-| `steam auth login` / `status` / `logout` / `refresh` / `revoke-all` | session & key management | ① + ② |
+| `steam set-key <key>` | store Web API key | ① |
+| `steam login` / `status` / `logout` / `refresh` / `revoke-all` | session & key management | ① + ② |
 | `steam doctor` | probe endpoint availability | ① + ③ (diagnostic) |
 | `steam config proxy set/show/test/unset` | configure & verify a proxy for all requests | local config |
 | `steam search <query>` | store search | ① |

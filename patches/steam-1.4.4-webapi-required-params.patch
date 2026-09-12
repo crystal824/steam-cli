@@ -1,0 +1,20 @@
+--- webapi.py.orig-1.4.4	2026-09-12 18:11:23.834235314 +0800
++++ /vol1/@appdata/trim.hermes/hermes/tools/steam-cli/.venv/lib/python3.11/site-packages/steam/webapi.py	2026-09-12 18:11:23.863570724 +0800
+@@ -305,8 +305,16 @@
+             islist = param['_array']
+             optional = param['optional']
+ 
++            # LOCAL PATCH 2026-09-11: Steam's GetSupportedAPIList metadata no
++            # longer matches what the live endpoints accept -- it marks params as
++            # required that the real API is happy to receive omitted (measured on
++            # IPlayerService.GetOwnedGames: 'appids_filter', then 'include_free_sub';
++            # the identical request without them returns 200 + the full library).
++            # Enforcing that metadata made every such call fail client-side before
++            # it ever reached Steam, so absent params are now simply skipped and
++            # Steam validates for real.
+             if not optional and name not in kwargs and name != 'key':
+-                raise ValueError("Method requires %s to be set" % repr(name))
++                continue
+ 
+             if name in kwargs:
+                 if islist and not isinstance(kwargs[name], list):

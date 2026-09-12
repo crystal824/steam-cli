@@ -7,63 +7,106 @@ description: Operate the user's Steam account via steam-cli — activate CD keys
 
 Operate the user's Steam account via the `steam` CLI.
 
+## Command names — top level, NOT `steam auth …`
+
+The commands are top-level: there is **no `auth` subcommand** (`steam auth status`
+fails with "No such command 'auth'"). Run `steam status` on its own.
+
+- `steam login [--username NAME]` — interactive login
+- `steam status` — login + Web API key state (run this first)
+- `steam logout` / `steam refresh` / `steam revoke-all`
+- `steam set-key <web_api_key>` — Web API key for read-only queries
+- `steam doctor` — probe the endpoints this CLI depends on
+
 ## Operating rules
 
-- Always run `steam auth status` first to confirm credentials (login session and/or Web API key).
-- If Steam requests fail with `network_error` (or timeouts/connection refused), Steam access may be unstable in the user's region: ask the user for proxy server details (host, port, and optional username/password), then run `steam config proxy set <url>` or `steam config proxy set --host H --port P [--username U] [--password P]`, verify with `steam config proxy test`, and retry. Remove it later with `steam config proxy unset`.
-- All write operations — `activate`, `wishlist add`/`remove`, `review post`, `friends invite-link --refresh` — require an explicit second confirmation of user intent, unless the user already said "直接执行" / "just do it". The CLI itself confirms single activations too; pass `--yes` to skip. Batch activation (`--batch`) shows the full preview and confirms once, never per-key.
-- The login session is transparent to the user: they log in once (Steam Guard / email / captcha); the program keeps and refreshes the session; later CDK activations reuse it without re-login.
-- If login or activation triggers a captcha or any other challenge, hand control back to the user. Never auto-retry or attempt programmatic bypass.
-- Any request involving real money, purchases, trading, changing email/phone, or account security → refuse immediately and explain why (safety red line).
-- Prefer CLI subcommands; do not hand-craft HTTP requests.
-- Output concise tables/lists.
-- On error, surface the structured error type (`invalid_format` / `already_activated` / `region_locked` / `invalid_key` / `network_error` / `session_expired` / `not_authenticated` / `api_key_missing`), plus the raw CLI output when useful.
+- Always start with `steam status`; a session that has gone invalid is re-minted
+  (no password, no 2FA) with `tools/steam_remint_session.py --save`.
+- Public store queries (`search`, `app`, `price`, `radar`) need no credentials at
+  all. Library / wishlist / friends / stats / news / achievements need a Web API key.
+- Write operations — `activate`, `wishlist add`/`remove`, `review post`,
+  `friends invite-link --refresh` — require explicit user intent; batch activation
+  previews the whole batch and confirms once, never per key.
+- A message that is *only* a product key (`XXXXX-XXXXX-XXXXX`, or 5 groups of 5)
+  means "activate this": validate with `--dry-run` first, then activate, then report
+  the product name or the structured reason. Never echo the full key back.
+- If a captcha or another challenge appears, hand control back to the user — never
+  auto-retry and never attempt a programmatic bypass.
+- Money, purchases, trading, and account-security changes are refused outright.
+- Prefer CLI subcommands over hand-crafted HTTP requests.
+- Surface the structured error type (`invalid_format` / `already_activated` /
+  `already_owned` / `region_locked` / `invalid_key` / `rate_limited` /
+  `network_error` / `session_expired` / `not_authenticated` / `api_key_missing`)
+  along with the raw CLI output when useful.
+
+## Activation semantics
+
+`already_activated` and `already_owned` (Steam result code 9) mean the key **was
+consumed earlier** — report them as "already in your library", never as a failure.
+Re-submitting a key is therefore a safe check: if the key had never worked, the
+response would be `invalid`.
+
+## Verifying that something landed
+
+`GetOwnedGames` carries no acquisition timestamp, and playtime can predate a key
+(the account may have played a Playtest build), so a library listing cannot prove
+*when* something was added. Use the licenses page instead — it carries the date and
+method (`Retail` = key/CDK, `Steam Store` = purchase, `Gift/Guest Pass` = gift):
+
+```bash
+.venv/bin/python tools/check_licenses.py --grep "<PRODUCT>"
+```
 
 ## Command quick reference
 
 Auth & status
-- `steam auth login` — interactive login (Steam Guard / email / captcha)
-- `steam auth status` — current login + API-key state
-- `steam auth logout` — clear saved session
-- `steam auth set-key <key>` — store Web API key (read-only queries)
-- `steam auth refresh` — check session validity
-- `steam auth revoke-all` — emergency wipe of all local credentials
-- `steam doctor` — probe availability of endpoints
+- `steam login` · `steam status` · `steam logout` · `steam set-key <key>` ·
+  `steam refresh` · `steam revoke-all` · `steam doctor`
 
 Proxy (network fallback)
 - `steam config proxy set <url>` or `--host/--port [--username/--password]`
-- `steam config proxy show` — masked view
-- `steam config proxy test` — verify the proxy reaches Steam
-- `steam config proxy unset`
+- `steam config proxy show | test | unset`
 
 Price history
-- `steam price <appid|name>` shows the historical low only when the env var `STEAM_CLI_ITAD_KEY` is set (IsThereAnyDeal developer key); without it the CLI prints a hint instead.
+- `steam price <appid|name>` shows the historical low only when the env var
+  `STEAM_CLI_ITAD_KEY` is set (IsThereAnyDeal developer key).
 
 Store & discovery
 - `steam search <query> [--limit N] [--type game|dlc|software|all]`
-- `steam app <appid|name>`
-- `steam price <appid|name>`
-- `steam news <appid> [--count N]`
+- `steam app <appid|name>` · `steam price <appid|name>` · `steam news <appid> [--count N]`
 - `steam radar [--wishlist] [--library-never-played]`
+- `steam profile <steamid|vanity>`
 
 Library & wishlist
 - `steam library list [--recent] [--never-played] [--sort name|playtime|added]`
 - `steam library has <appid|name>`
-- `steam wishlist list | add <id> | remove <id> | on-sale`
+- `steam wishlist list | add <id> [--dry-run] | remove <id> | on-sale`
 
 Activation & reviews
 - `steam activate <cdk> [--batch <file>] [--dry-run] [--yes]`
 - `steam review post <appid> --text "..." [--recommend|--not-recommend] [--dry-run]`
 - `steam review list <appid> [--mine]`
 
-Friends & profile
+Friends, stats & more
 - `steam friends list [--online] | playing <appid> | recently-played | invite-link [--refresh]`
-- `steam profile <steamid|vanity>`
-
-Stats, launch & more
 - `steam stats summary | game <appid>`
-- `steam launch <appid|name>`
 - `steam achievements <appid> [--missing] [--rarity]`
-- `steam recommend [--based-on library|wishlist] [--limit N]` — genre-overlap recommendations
+- `steam recommend [--based-on library|wishlist] [--limit N]`
+- `steam launch <appid|name>`
 
-See `references/` for the API map, auth details, safety policy, and examples.
+## Known limitations (current Steam backend)
+
+- **`steam login` may report success while producing a session that authenticates
+  nothing** — ValvePython's `WebAuth` targets the retired community
+  `/login/dologin/`. Use `tools/steam_modern_login.py` instead, and re-authenticate
+  later with `tools/steam_remint_session.py` (refresh token; no password, no 2FA).
+- `steam friends invite-link` returns **403** (`steamcommunity.com/actions/QuickInviteLink`
+  changed server-side). Do not retry-loop it.
+- Store requests hardcode `l=english&cc=us`: Chinese search terms often return no
+  rows and prices are USD. Retry with the English name or use an appid; do not
+  conclude "the game does not exist" from an empty Chinese search.
+- `steam launch` needs a desktop Steam client, so it is pointless on a headless host.
+- `steam recommend` / `radar` issue one price request per appid and are slow.
+
+See [`../../docs/steam-endpoint-changes-2026.md`](../../docs/steam-endpoint-changes-2026.md)
+for the full endpoint-by-endpoint breakdown.

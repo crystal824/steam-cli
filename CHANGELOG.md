@@ -2,6 +2,56 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0] - 2026-09-12
+
+Steam retired several endpoints this CLI was built on. This release reworks the
+affected paths and adds the tooling needed to log in, re-authenticate and verify
+activations against the current backend. See
+[docs/steam-endpoint-changes-2026.md](docs/steam-endpoint-changes-2026.md).
+
+### Bug Fixes
+
+- **activate**: post CDK activation to `/account/ajaxregisterkey/` — `/account/registerkey`
+  is only the HTML form page, so every activation previously ended in
+  `endpoint_unavailable` regardless of the key being valid. Responses are now parsed
+  as JSON, and `purchase_result_details` is mapped in full (invalid / already
+  activated / already owned / region locked / rate limited / base game required /
+  retry later). The activated product name is printed and logged.
+- **wishlist**: replace the retired `wishlistdata` endpoint (302 on every request)
+  with `IWishlistService/GetWishlist/v1/`, resolving display names with concurrent
+  single-appid lookups (batched `appdetails` is now HTTP 400) and caching them.
+- **auth**: add `cookie_value()`, an iteration-based cookie lookup. Steam mirrors
+  `sessionid`/`steamLoginSecure` across three domains, so `cookies.get()` raised
+  `CookieConflictError` and crashed `activate`, `friends`, `review` and `wishlist`.
+- **achievements**: `ISteamUserStats` returns `percent` as a string; formatting it
+  with `:.2f` raised `ValueError`. Values are now coerced, with unparseable entries
+  sorting last.
+- **docs**: correct every `steam auth <cmd>` reference — the CLI exposes those
+  commands at the top level (`steam status`, `steam set-key`, …).
+
+### Features
+
+- `tools/steam_modern_login.py` — login through `IAuthenticationService`
+  (RSA -> BeginAuthSession -> mobile-app approval or Steam Guard code -> poll ->
+  `finalizelogin` -> settoken). Needed because ValvePython's `WebAuth` targets the
+  retired community `/login/dologin/` and yields a session that authenticates
+  nothing. Also records a long-lived refresh token.
+- `tools/steam_remint_session.py` — re-mint session cookies from the stored refresh
+  token, with no password and no 2FA.
+- `tools/check_licenses.py` — list licenses with acquisition date and method, the
+  authoritative way to confirm an activation actually landed.
+
+### Build & CI
+
+- Lint and format checks now cover `tools/` as well.
+
+### Documentation
+
+- `docs/steam-endpoint-changes-2026.md` — every retired/changed endpoint, the
+  symptom each one produces, the fix, and the one-parameter settoken blocker
+  (`steamID` is required or Steam answers `{"result":8}` and mints nothing).
+- `tools/README.md`, `patches/README.md`.
+
 ### Bug Fixes
 
 - Add ruff and mypy to dev dependencies for CI

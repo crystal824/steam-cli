@@ -57,6 +57,29 @@ export STEAM_CLI_ITAD_KEY=<itad_key>
 steam price 2358720                    # includes historical low
 ```
 
+## Compatibility with current Steam (2026)
+
+Valve retired several endpoints this CLI was originally built on — web login, CDK
+activation, wishlist reads and batched app lookups. Those paths have been reworked;
+the details, symptoms and one remaining server-side breakage are documented in
+[docs/steam-endpoint-changes-2026.md](docs/steam-endpoint-changes-2026.md).
+
+Practical consequences:
+
+- **`steam login` may report success yet produce a session that authenticates
+  nothing** (ValvePython still posts to the retired `/login/dologin/`). Use
+  `tools/steam_modern_login.py` instead; afterwards
+  `tools/steam_remint_session.py` re-authenticates from the stored refresh token
+  with **no password and no 2FA**.
+- **Verify activations** with `tools/check_licenses.py`, which reads the account
+  licenses page (acquisition date + method). `GetOwnedGames` has no acquisition
+  timestamp, so a library listing cannot prove when something was added.
+- `steam friends invite-link` currently returns **403** — Steam changed that
+  endpoint server-side.
+- Store queries hardcode `l=english&cc=us`: names and prices are US/English.
+- A couple of quirks in the installed `steam` package need local patches; see
+  [`patches/`](patches/README.md).
+
 ## Proxy
 
 Steam services can be unstable in some regions. Configure one proxy that

@@ -6,9 +6,9 @@ Some commands (search, app, price, news, achievements) work with just a Web API 
 
 1. Have the user open https://steamcommunity.com/dev/apikey (must be signed into Steam in the browser).
 2. Fill in a domain (any string is accepted) and agree to the terms.
-3. Store it: `steam auth set-key <key>`.
+3. Store it: `steam set-key <key>`.
 
-Verify with `steam auth status` (shows "Web API key: set" and whether it is valid).
+Verify with `steam status` (shows "Web API key: set" and whether it is valid).
 
 **Optional: IsThereAnyDeal key for price history.** `steam price` shows the
 historical low only when `STEAM_CLI_ITAD_KEY` is set (register at
@@ -20,7 +20,7 @@ failing.
 Write operations and personal reads need a login session:
 
 ```bash
-steam auth login            # or: steam auth login --username <name>
+steam login            # or: steam login --username <name>
 ```
 
 The CLI uses `steam.webauth.WebAuth` to log in interactively. It prompts for the password and handles:
@@ -31,11 +31,15 @@ The CLI uses `steam.webauth.WebAuth` to log in interactively. It prompts for the
 
 Rule: never auto-retry or attempt to bypass these challenges programmatically. If one appears, ask the user and pass the input through.
 
-After a successful login the session cookies are stored, so subsequent operations (`activate`, wishlist writes, reviews, invite links) reuse it without re-login. `steam auth refresh` checks the session; if it has gone invalid, re-run `steam auth login`.
+After a successful login the session cookies are stored, so subsequent operations (`activate`, wishlist writes, reviews, invite links) reuse it without re-login. `steam refresh` checks the session; if it has gone invalid, re-run `steam login`.
 
 ## Session storage
 
 High-sensitivity secrets (Web API key, session cookies, session id, steam id, username) are stored through the OS keyring via the `keyring` library under the service name `steam-cli` (Keychain / Credential Manager / Secret Service). If the keyring is unavailable it falls back to local `.secret` files under `~/.config/steam-cli` (override with `$STEAM_CLI_HOME`), created with mode 0600. Low-sensitivity caches (e.g. appid index) are plain local files.
+
+**Headless hosts:** without a Secret Service (servers, containers, NAS), `keyring`
+resolves to the *fail* backend and every secret lands in `~/.config/steam-cli/<key>.secret`
+with mode 0600. That fallback is expected — check the state with `steam status`.
 
 ## Proxy
 
@@ -49,14 +53,14 @@ steam config proxy show                                   # masked view
 steam config proxy unset                                  # remove it
 ```
 
-The proxy URL (including credentials) is stored in the OS keyring like the other secrets. Supported schemes: `http`, `https`, `socks4`, `socks5`, `socks5h` (SOCKS needs `PySocks`/`socksio` installed). The proxy also applies to `steam auth login`.
+The proxy URL (including credentials) is stored in the OS keyring like the other secrets. Supported schemes: `http`, `https`, `socks4`, `socks5`, `socks5h` (SOCKS needs `PySocks`/`socksio` installed). The proxy also applies to `steam login`.
 
 ## Emergency wipe
 
 If credentials are suspected leaked:
 
 ```bash
-steam auth revoke-all
+steam revoke-all
 ```
 
-This clears every locally stored credential (session and API key). Log out of a single session with `steam auth logout`.
+This clears every locally stored credential (session and API key). Log out of a single session with `steam logout`.

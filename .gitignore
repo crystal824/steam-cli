@@ -8,3 +8,8 @@ dist/
 .mypy_cache/
 .ruff_cache/
 *.secret
+
+# local patch scratch copies (kept out of history)
+*.orig
+*.bak
+*.bak-*
