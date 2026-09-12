@@ -144,7 +144,7 @@ def register(app: typer.Typer) -> None:
         """Show or refresh your friend invite link."""
         session = auth.require_session()
         try:
-            sessionid = session.cookies.get("sessionid") or ""
+            sessionid = auth.cookie_value(session, "sessionid")
             if refresh:
                 resp = session.post(INVITE_LINK_URL, data={"sessionid": sessionid}, timeout=15)
             else:

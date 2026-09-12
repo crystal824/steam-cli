@@ -75,7 +75,7 @@ def register(app: typer.Typer) -> None:
             )
             console.print(f"  {text}")
             return
-        sessionid = session.cookies.get("sessionid") or ""
+        sessionid = auth.cookie_value(session, "sessionid")
         url = REVIEW_POST_URL.format(steamid=steamid)
         data = {
             "appid": appid,

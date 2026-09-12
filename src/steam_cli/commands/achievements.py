@@ -14,6 +14,17 @@ from ..errors import NetworkError
 console = Console()
 
 
+def _pct_value(value) -> float:
+    """LOCAL PATCH 2026-09-11: ISteamUserStats returns `percent` as a *string*
+    (e.g. "12.34"), while the shipped code formatted it with `:.2f` and blew up
+    with "Unknown format code 'f' for object of type 'str'". Missing/unparseable
+    values collapse to 101.0 (sorts last, renders as "-")."""
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 101.0
+
+
 def _format_ts(ts: float | None) -> str:
     if not ts:
         return "-"
@@ -62,7 +73,7 @@ def register(app: typer.Typer) -> None:
             )
 
         if rarity:
-            rows.sort(key=lambda r: r["percent"] if r["percent"] is not None else 101.0)
+            rows.sort(key=lambda r: _pct_value(r["percent"]))
 
         table = Table(title=f"achievements: {appid}")
         table.add_column("Name")
@@ -70,7 +81,8 @@ def register(app: typer.Typer) -> None:
         table.add_column("Unlocked")
         table.add_column("Global %")
         for row in rows:
-            pct = f"{row['percent']:.2f}" if row["percent"] is not None else "-"
+            value = _pct_value(row["percent"])
+            pct = "-" if value == 101.0 else f"{value:.2f}"
             table.add_row(
                 row["name"],
                 "yes" if row["achieved"] else "no",

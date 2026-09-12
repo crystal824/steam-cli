@@ -22,7 +22,21 @@ from ..errors import (
 
 console = Console()
 
-ACTIVATE_URL = "https://store.steampowered.com/account/registerkey"
+REGISTER_PAGE = "https://store.steampowered.com/account/registerkey"
+# 2026-09-12 实测：/account/registerkey 只是**表单页**（POST 它也只会回表单 HTML），
+# 真正做激活的是 ajaxregisterkey（返回 JSON；store 前端 registerkey.js 用的就是它）。
+ACTIVATE_URL = "https://store.steampowered.com/account/ajaxregisterkey/"
+
+# purchase_result_details 错误码（摘自 store 前端 registerkey.js）
+_PURCHASE_RESULTS = {
+    14: "invalid",
+    15: "already_activated",
+    53: "rate_limited",
+    13: "region_locked",
+    9: "already_owned",
+    24: "base_game_required",
+    4: "retry_later",
+}
 
 _CDK_RE_3 = re.compile(r"^[A-Z0-9]{5}-[A-Z0-9]{5}-[A-Z0-9]{5}$")
 _CDK_RE_5 = re.compile(r"^[A-Z0-9]{5}-[A-Z0-9]{5}-[A-Z0-9]{5}-[A-Z0-9]{5}-[A-Z0-9]{5}$")
@@ -56,20 +70,44 @@ def _mask_key(key: str) -> str:
     return key[:4] + "-****-" + key[-4:]
 
 
-def _activate_key(session: requests.Session, key: str, sessionid: str) -> str:
+def _receipt_name(data: dict) -> str | None:
+    receipt = data.get("purchase_receipt_info") or {}
+    items = receipt.get("line_items") or []
+    if items:
+        return items[0].get("line_item_description")
+    return None
+
+
+def _activate_key(session: requests.Session, key: str, sessionid: str) -> tuple[str, str | None]:
+    """返回 (result, 商品名)；result == "ok" 即激活成功。"""
     try:
         resp = session.post(
-            ACTIVATE_URL, data={"product_key": key, "sessionid": sessionid}, timeout=20
+            ACTIVATE_URL,
+            data={"product_key": key, "sessionid": sessionid},
+            headers={
+                "Referer": REGISTER_PAGE,
+                "Origin": "https://store.steampowered.com",
+                "X-Requested-With": "XMLHttpRequest",
+            },
+            timeout=25,
         )
     except requests.RequestException as exc:
         raise NetworkError(detail=str(exc))
     if resp.status_code != 200:
-        return f"http:{resp.status_code}"
-    text = resp.text.lower()
-    for result, phrases in _RESULT_PHRASES:
-        if any(p in text for p in phrases):
-            return result
-    return "unknown"
+        return f"http:{resp.status_code}", None
+    try:
+        data = resp.json()
+    except ValueError:
+        # 非 JSON：通常是被风控/会话失效时返回的表单页 —— 退回短语兜底
+        text = resp.text.lower()
+        for result, phrases in _RESULT_PHRASES:
+            if any(p in text for p in phrases):
+                return result, None
+        return "unknown", None
+    name = _receipt_name(data)
+    if data.get("success") == 1:
+        return "ok", name
+    return _PURCHASE_RESULTS.get(data.get("purchase_result_details"), "unknown"), name
 
 
 def _describe_result(result: str) -> str:
@@ -83,6 +121,12 @@ def _describe_result(result: str) -> str:
         return "[red]invalid[/red]"
     if result == "rate_limited":
         return "[yellow]rate limited[/yellow]"
+    if result == "already_owned":
+        return "[yellow]already owned[/yellow]"
+    if result == "base_game_required":
+        return "[red]base game required[/red]"
+    if result == "retry_later":
+        return "[yellow]retry later (30 min)[/yellow]"
     if result == "unknown":
         return "[red]unrecognized response[/red]"
     return f"[red]{result}[/red]"
@@ -101,6 +145,12 @@ def _raise_for_result(result: str, key: str) -> None:
         raise NetworkError("rate limited; wait a while and retry")
     if result.startswith("http:"):
         raise NetworkError(detail=f"HTTP {result.split(':', 1)[1]}")
+    if result == "already_owned":
+        raise AlreadyActivatedError("this account already owns this product")
+    if result == "base_game_required":
+        raise InvalidKeyError("the base game must be activated before this key")
+    if result == "retry_later":
+        raise NetworkError("Steam asked to retry later; wait 30 minutes")
     raise EndpointUnavailableError(
         detail="the activation response could not be parsed; the endpoint may have changed"
     )
@@ -147,11 +197,12 @@ def register(app: typer.Typer) -> None:
         if not yes and not typer.confirm(f"Activate {_mask_key(key)}?"):
             raise typer.Abort()
         session = auth.require_session()
-        sessionid = session.cookies.get("sessionid") or ""
-        result = _activate_key(session, key, sessionid)
-        auth.log_audit("activate", _mask_key(key), result)
+        sessionid = auth.cookie_value(session, "sessionid")
+        result, name = _activate_key(session, key, sessionid)
+        auth.log_audit("activate", _mask_key(key), f"{result}:{name}" if name else result)
         if result == "ok":
-            console.print(f"[green]Activated {_mask_key(key)}[/green]")
+            label = f" — [bold]{name}[/bold]" if name else ""
+            console.print(f"[green]Activated {_mask_key(key)}[/green]{label}")
         else:
             _raise_for_result(result, key)
 
@@ -198,17 +249,17 @@ def _activate_batch(path: str, dry_run: bool, yes: bool) -> None:
         raise typer.Abort()
 
     session = auth.require_session()
-    sessionid = session.cookies.get("sessionid") or ""
-    rows: list[tuple[str, str]] = []
+    sessionid = auth.cookie_value(session, "sessionid")
+    rows: list[tuple[str, str, str | None]] = []
     for k in valid:
-        result = _activate_key(session, k, sessionid)
-        rows.append((k, result))
-        auth.log_audit("activate", _mask_key(k), result)
+        result, name = _activate_key(session, k, sessionid)
+        rows.append((k, result, name))
+        auth.log_audit("activate", _mask_key(k), f"{result}:{name}" if name else result)
         time.sleep(2)
 
     table = Table(title="Activation results")
     table.add_column("Key")
     table.add_column("Result")
-    for k, result in rows:
-        table.add_row(_mask_key(k), _describe_result(result))
+    for k, result, name in rows:
+        table.add_row(_mask_key(k), _describe_result(result) + (f" — {name}" if name else ""))
     console.print(table)

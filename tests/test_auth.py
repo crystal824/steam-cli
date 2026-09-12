@@ -98,3 +98,17 @@ def test_log_audit_creates_file_with_owner_only_permissions(monkeypatch, tmp_pat
     mode = stat.S_IMODE(audit_log.stat().st_mode)
     assert mode == 0o600
     assert "ABCD-****-WXYZ" in audit_log.read_text()
+
+
+def test_cookie_value_survives_mirrored_domains():
+    """Steam mirrors sessionid onto three domains; requests' own .get() raises
+    CookieConflictError there, which used to crash wishlist/friends/review/activate."""
+    session = requests.Session()
+    for domain in ("store.steampowered.com", "steamcommunity.com", "help.steampowered.com"):
+        session.cookies.set("sessionid", "abc123", domain=domain, path="/")
+    assert auth.cookie_value(session, "sessionid") == "abc123"
+
+
+def test_cookie_value_missing_and_dict_like_stub():
+    assert auth.cookie_value(requests.Session(), "sessionid") == ""
+    assert auth.cookie_value(SimpleNamespace(cookies={"sessionid": "sid"}), "sessionid") == "sid"

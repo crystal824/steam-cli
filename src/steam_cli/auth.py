@@ -220,6 +220,32 @@ def load_session() -> SessionState | None:
     )
 
 
+def cookie_value(session: requests.Session, name: str) -> str:
+    """First value of cookie `name`, ignoring per-domain duplicates.
+
+    requests' ``Cookies.get()`` raises ``CookieConflictError`` as soon as the
+    same cookie name exists for more than one domain -- which is the normal
+    state for a Steam session, because sessionid / steamLoginSecure are mirrored
+    onto store.steampowered.com, steamcommunity.com and help.steampowered.com.
+    Every session-cookie lookup in this CLI must go through here.
+
+    Iterating is the primary path (no duplicate lookup involved); the
+    ``jar.get`` fallback keeps dict-like test stubs working.
+    """
+    jar = getattr(session, "cookies", None)
+    if jar is None:
+        return ""
+    for cookie in jar:
+        if getattr(cookie, "name", None) == name:
+            value = getattr(cookie, "value", "")
+            if value:
+                return str(value)
+    try:
+        return str(jar.get(name) or "")
+    except Exception:  # CookieConflictError on duplicates, or an unusable stub
+        return ""
+
+
 def clear_session() -> None:
     for key in (KEY_SESSION, KEY_SESSION_ID, KEY_STEAM_ID, KEY_USERNAME):
         _keyring_delete(key)
