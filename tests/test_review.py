@@ -381,3 +381,49 @@ def test_sample_recent_asks_the_first_page_to_start_at_the_top_of_the_list():
     )
     review.sample_recent(client, "1", language="all", days=30)
     assert client.requests[0]["params"]["cursor"] == "*"
+
+
+CHINESE_PAGE = """
+<div class="review_box_content">
+  <div class="rightcol">
+    <div class="vote_header">
+      <a href="x"><img src=".../userreviews/icon_thumbsUp.png"></a>
+      <div class="title"><a href="x">推荐</a></div>
+      <div class="hours"> 122.2 小时（评测时 10.9 小时） </div>
+    </div>
+    <div class="content ">黑神话悟空就像巧克力，人吃了高兴！</div>
+    <div class="posted"> 发布于 2024 年 8 月 21 日 </div>
+    <button type="button" class="trigger" id="V_trigger">公开</button>
+  </div>
+</div>
+<div class="review_box_content">
+  <div class="rightcol">
+    <div class="vote_header">
+      <a href="y"><img src=".../userreviews/icon_thumbsDown.png"></a>
+      <div class="title"><a href="y">不推荐</a></div>
+    </div>
+    <div class="content ">失望</div>
+  </div>
+</div>
+"""
+
+
+def test_parse_my_reviews_reads_verdicts_from_the_icons_not_the_language():
+    """Regression: the page renders in the account's Steam language, so the English
+    words ("Recommended", "Posted") disappear for a Chinese account. The thumb icon
+    file names do not move, so the verdict is taken from those."""
+    got = parse_my_reviews(CHINESE_PAGE)
+    assert [r["appid"] for r in got] == ["", ""]  # no /app/ links in this fixture
+    assert got[0]["verdict"] == "recommended"
+    assert got[0]["text"] == "黑神话悟空就像巧克力，人吃了高兴！"
+    assert got[1]["verdict"] == "not recommended"  # not swallowed by the 推荐 substring
+
+
+def test_my_reviews_asks_for_the_english_rendering():
+    """The date/playtime/visibility columns are parsed from English labels, so the
+    request pins `l=english` instead of trusting the session's Steam_Language."""
+    page = '<div class="review_box_content"><div class="content ">x</div></div>'
+    session = FakeSession(FakeResponse(200, page))
+    review.my_reviews(session, "76561198121699884")
+    _, kwargs = session.last_post
+    assert kwargs["params"] == {"l": "english"}

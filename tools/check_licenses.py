@@ -37,6 +37,10 @@ sys.path.insert(0, str(REPO / "src"))
 from steam_cli import auth
 
 LICENSES_URL = "https://store.steampowered.com/account/licenses/"
+# The page is parsed as HTML and its acquisition column is localised ("Retail" /
+# 零售, "Steam Store" / Steam 商店), so ask for the English rendering explicitly
+# instead of inheriting the session's Steam_Language.
+LICENSES_PARAMS = {"l": "english"}
 UA = (
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) "
     "Chrome/124.0.0.0 Safari/537.36"
@@ -62,7 +66,9 @@ def _text(cell: str) -> str:
 
 
 def rows() -> list[list[str]]:
-    html = re.sub(r"\s+", " ", _session().get(LICENSES_URL, timeout=30).text)
+    html = re.sub(
+        r"\s+", " ", _session().get(LICENSES_URL, params=LICENSES_PARAMS, timeout=30).text
+    )
     out: list[list[str]] = []
     for tr in re.findall(r"<tr[^>]*>(.*?)</tr>", html, re.DOTALL):
         cells = [_text(td) for td in re.findall(r"<td[^>]*>(.*?)</td>", tr, re.DOTALL)]

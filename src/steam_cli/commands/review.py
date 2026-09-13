@@ -155,9 +155,12 @@ def parse_my_reviews(page: str) -> list[dict]:
         posted = re.search(r"Posted ([^<]+)<", block)
         hours = re.search(r"([\d.]+) hrs on record", block)
         visibility = re.search(r'class="trigger"[^>]*>\s*([A-Za-z]+)\s*</button>', block)
-        if "Not Recommended" in block:
+        # Judge from the thumb icon first: the profile page renders in the account's
+        # language (a Chinese account gets 推荐/不推荐), while the icon file names do
+        # not move. 不推荐 must be tested before 推荐 -- it contains it.
+        if "icon_thumbsDown" in block or "Not Recommended" in block or "不推荐" in block:
             verdict = "not recommended"
-        elif "Recommended" in block:
+        elif "icon_thumbsUp" in block or "Recommended" in block or "推荐" in block:
             verdict = "recommended"
         else:
             verdict = "unknown"
@@ -183,7 +186,11 @@ def my_reviews(session: requests.Session, steamid: str) -> list[dict]:
     """
     url = MY_REVIEWS_URL.format(steamid=steamid)
     try:
-        resp = session.get(url, headers={"User-Agent": _UA}, timeout=20)
+        # `l=english` is deliberate: this page is parsed as HTML, and a session whose
+        # Steam_Language is not English renders it in that language ("发布于", "小时",
+        # "可见性"), which would silently blank the date/playtime/visibility columns.
+        # The verdict does not depend on it any more (see parse_my_reviews).
+        resp = session.get(url, params={"l": "english"}, headers={"User-Agent": _UA}, timeout=20)
     except requests.RequestException as exc:
         raise NetworkError(detail=str(exc))
     if resp.status_code != 200:
