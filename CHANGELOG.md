@@ -4,11 +4,57 @@ All notable changes to this project will be documented in this file.
 
 ## [0.2.5] - 2026-09-13
 
+### Build & CI
+
+- Ship README.zh-CN.md in the sdist
+
+
 ### Documentation
 
 - Review summaries and account-aware store region
 
 - **releases:** V0.2.5 notes and version bump
+
+- Rewrite the README for 0.2.5 (English + 中文)
+  The README still documented the pre-0.2 era: it told readers to run `steam auth
+  login` / `set-key` (there is no `auth` subcommand), listed `review summary` with no
+  explanation, filed the account region as a caveat, and claimed every write operation
+  "requires confirmation" when only `activate` prompts.
+  
+  Rewritten around what the CLI actually does now: the reception-reading workflow with a
+  real `--json` excerpt, account-aware region and language, the current command surface
+  with its credential tiers per command, an honest safety section (which commands prompt
+  and which publish immediately), and the 2026 endpoint reworks including the review
+  endpoint that used to report success without publishing.
+  
+  Adds README.zh-CN.md — the same document in Chinese, cross-linked — matching the
+  bilingual convention the release notes already follow.
+
+- Note that the review summary output labels are Chinese
+
+- Bring the developer docs and skill references up to 0.2.5
+  `docs/development.md` was still the pre-implementation plan (phase 0-4 schedule,
+  `steam auth login` spellings, a feature wishlist). Rewritten as a current developer
+  guide: code map, layer-to-module mapping, the region resolution rules and its measured
+  traps, how to add a command, the four gates, the release flow, and the known gaps.
+  
+  The skill references got the same treatment where they had drifted:
+  
+  - `dev-plan.md` now opens with a banner — it is a design proposal from 2026-08-23,
+    not a description of the shipped CLI.
+  - `api-map.md`: added `review summary` / `review mine` / `config region`, and fixed
+    the layer labels (Web-API-key reads are layer ①, not ②).
+  - `safety.md`: a table showing which commands the CLI actually prompts for — only
+    `activate` does; `wishlist add/remove`, `review post` and `invite-link` run the
+    moment they are called, so the agent has to hold the confirmation.
+  - `auth.md`: `steam login` still drives ValvePython's retired `/login/dologin/`;
+    point readers at `tools/steam_modern_login.py` / `steam_remint_session.py`.
+  - `CONTRIBUTING.md`: the local ruff gate was missing the `tools` directory CI checks.
+
+- **releases:** Keep the v0.2.5 notes off the maintainer's own account
+  The upgrading note named the repository owner's store region and currency. It now
+  describes the behaviour generically (an account whose store region is mainland China
+  sees CNY and Simplified Chinese).
 
 
 ### Features
