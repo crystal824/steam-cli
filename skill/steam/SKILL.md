@@ -30,7 +30,9 @@ fails with "No such command 'auth'"). Run `steam status` on its own.
 - `steam review post` publishes **immediately** — there is no confirmation prompt, so
   draft the wording and get the user's approval first. Steam requires **at least 5
   minutes of playtime** on the product before it accepts a review, and the review's
-  language is set with `-L` (default `schinese`).
+  language is set with `-L` (default: the store language resolved from the account —
+  `schinese` for a Chinese account). Note that `activate` is the **only** command with
+  a CLI confirmation prompt; the rest of this list publishes as soon as it runs.
 - A message that is *only* a product key (`XXXXX-XXXXX-XXXXX`, or 5 groups of 5)
   means "activate this": validate with `--dry-run` first, then activate, then report
   the product name or the structured reason. Never echo the full key back.

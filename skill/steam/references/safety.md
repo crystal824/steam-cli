@@ -27,14 +27,19 @@ Keys must be **3 segments × 5 chars (15 chars, e.g. `XXXXX-XXXXX-XXXXX`)** or, 
 
 ## Confirmation requirements (write ops)
 
-Second confirmation of user intent is required before executing:
+Second confirmation of user intent is required before executing any of these — and
+the agent, not the CLI, is what enforces it:
 
-- `activate` (and `--batch`)
-- `wishlist add` / `remove`
-- `review post`
-- `friends invite-link --refresh`
+| Command | CLI prompt? | How `--dry-run` helps |
+|---|---|---|
+| `activate` (and `--batch`) | **yes** — asks to confirm the (masked) key; `--yes` skips it | preview the key/batch |
+| `wishlist add` / `remove` | **no** — runs immediately | previews the target app |
+| `review post` | **no** — publishes immediately | previews the exact request payload |
+| `friends invite-link --refresh` | **no** — runs immediately | n/a |
 
-Skip the second confirmation only when the user already said "直接执行" / "just do it".
+So: get the user's explicit go-ahead first, and for `review post` get the **wording**
+too (it is public the moment it runs). Skip the second confirmation only when the user
+already said "直接执行" / "just do it".
 
 ## Audit logging
 

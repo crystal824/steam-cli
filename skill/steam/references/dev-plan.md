@@ -1,3 +1,12 @@
+> **Historical document — a design proposal, not a description of the shipped CLI.**
+> Written 2026-08-23 (v0.2) before most of the implementation existed: the command
+> spellings (`steam auth login`, `steam auth status`, …), the phase plan and the file
+> layout below are **not** current. For what is actually installed, read
+> [`../SKILL.md`](../SKILL.md) and the repository's
+> [`docs/steam-endpoint-changes-2026.md`](../../../docs/steam-endpoint-changes-2026.md);
+> commands are top-level (`steam status`, `steam set-key`), and several endpoints in
+> this plan were retired by Valve and reworked.
+
 # Steam CLI & Hermes Skill 开发文档
 
 > 目标：为 Hermes Agent 提供一套可调用的 Steam 操作能力，让 Agent 能通过自然语言安全、可控地操作用户 Steam 账号。

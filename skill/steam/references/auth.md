@@ -23,7 +23,12 @@ Write operations and personal reads need a login session:
 steam login            # or: steam login --username <name>
 ```
 
-The CLI uses `steam.webauth.WebAuth` to log in interactively. It prompts for the password and handles:
+**Caveat (2026):** the `steam login` command still drives ValvePython's
+`steam.webauth.WebAuth`, which posts to Steam's retired community `/login/dologin/`.
+That call can report success while producing a session that authenticates nothing —
+prefer [`tools/steam_modern_login.py`](../../../tools/README.md), which implements the
+flow Steam actually uses today (`IAuthenticationService` + `finalizelogin`). The
+prompts below are the same either way:
 
 - **Steam Guard mobile code** — user enters the code from the Steam app.
 - **Email code** — user enters the code sent to their email.
@@ -31,7 +36,7 @@ The CLI uses `steam.webauth.WebAuth` to log in interactively. It prompts for the
 
 Rule: never auto-retry or attempt to bypass these challenges programmatically. If one appears, ask the user and pass the input through.
 
-After a successful login the session cookies are stored, so subsequent operations (`activate`, wishlist writes, reviews, invite links) reuse it without re-login. `steam refresh` checks the session; if it has gone invalid, re-run `steam login`.
+After a successful login the session cookies **plus a long-lived refresh token** are stored, so subsequent operations (`activate`, wishlist writes, reviews, invite links) reuse them without re-login. `steam status` / `steam refresh` check the session; when it has gone invalid, re-mint it from the refresh token with `tools/steam_remint_session.py --save` — no password and no 2FA. A full login is only needed once the refresh token itself expires.
 
 ## Session storage
 

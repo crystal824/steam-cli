@@ -13,8 +13,8 @@ pre-commit install          # 注册 git 提交钩子
 本地检查（与 CI 完全一致）：
 
 ```bash
-ruff check src tests        # 代码规范
-ruff format --check src tests
+ruff check src tests tools  # 代码规范
+ruff format --check src tests tools
 mypy src                    # 类型检查
 pytest -q                   # 测试
 ```
