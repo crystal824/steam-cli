@@ -5,6 +5,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 import re
 
+import pytest
+
 from steam_cli.client import resolve_appid
 from steam_cli.commands import review
 from steam_cli.commands.activate import validate_cdk_format
@@ -69,3 +71,38 @@ def test_error_types():
     err = AlreadyActivatedError()
     assert err.code == "already_activated"
     assert InvalidFormatError().code == "invalid_format"
+
+
+def test_resolve_appid_sends_cjk_titles_to_the_chinese_store_search(monkeypatch):
+    """The community SearchApps index answers [] for 艾尔登法环 and can even return
+    a knock-off for 黑神话; the Chinese store search returns the real app."""
+    from steam_cli import client
+
+    calls: list[tuple[str, dict]] = []
+
+    def fake_store_search(term, lang="english", cc="us"):
+        calls.append((term, {"lang": lang, "cc": cc}))
+        return [{"appid": 2358720, "name": "黑神话：悟空"}] if lang == "schinese" else []
+
+    monkeypatch.setattr(client, "_store_search", fake_store_search)
+    monkeypatch.setattr(client, "_search_apps", lambda term: [])
+    client.resolve_appid.cache_clear()
+    try:
+        assert client.resolve_appid("黑神话") == 2358720
+        assert calls[0] == ("黑神话", {"lang": "schinese", "cc": "cn"})
+    finally:
+        client.resolve_appid.cache_clear()
+
+
+def test_resolve_appid_keeps_english_terms_on_the_community_search(monkeypatch):
+    from steam_cli import client
+
+    monkeypatch.setattr(client, "_search_apps", lambda term: [{"appid": 2807960, "name": "BF6"}])
+    monkeypatch.setattr(
+        client, "_store_search", lambda *a, **kw: pytest.fail("should not hit storesearch")
+    )
+    client.resolve_appid.cache_clear()
+    try:
+        assert client.resolve_appid("Battlefield") == 2807960
+    finally:
+        client.resolve_appid.cache_clear()
