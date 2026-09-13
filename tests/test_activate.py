@@ -57,8 +57,8 @@ def rejected(code):
 
 
 def test_activate_success_returns_product_name():
-    session = FakeSession(FakeResponse(200, payload=receipt("WARDOGS (CN)")))
-    assert _activate_key(session, "K", "sid123") == ("ok", "WARDOGS (CN)")
+    session = FakeSession(FakeResponse(200, payload=receipt("SAMPLE GAME (CN)")))
+    assert _activate_key(session, "K", "sid123") == ("ok", "SAMPLE GAME (CN)")
 
 
 def test_activate_posts_to_ajax_endpoint_with_xhr_headers():
