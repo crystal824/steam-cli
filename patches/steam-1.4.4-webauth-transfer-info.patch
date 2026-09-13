@@ -1,50 +1,86 @@
---- webauth.py.orig-1.4.4	2026-09-12 17:54:32.913544267 +0800
-+++ /vol1/@appdata/trim.hermes/hermes/tools/steam-cli/.venv/lib/python3.11/site-packages/steam/webauth.py	2026-09-12 17:54:32.936692296 +0800
-@@ -150,7 +150,46 @@
+--- steam/webauth.py.orig-1.4.4
++++ steam/webauth.py
+@@ -150,7 +150,82 @@
              raise HTTPError(str(e))
  
      def _finalize_login(self, login_response):
 -        self.steam_id = SteamID(login_response['transfer_parameters']['steamid'])
-+        # LOCAL PATCH 2026-09-11 (steam 1.4.4 vs current Steam login flow):
-+        # Steam now answers /login/dologin with "transfer_info" (a list of
-+        # {url, params}) instead of the legacy flat "transfer_parameters" dict,
-+        # which made the original one-liner raise KeyError: 'transfer_parameters'
-+        # after an otherwise successful password + 2FA login.
-+        # This version accepts both shapes, replays the settoken transfers the
-+        # official web flow performs, and never raises on a missing steamid
-+        # (the cookie jar already carries the session at that point).
-+        params: dict = {}
-+        legacy = login_response.get('transfer_parameters')
-+        if isinstance(legacy, dict):
-+            params.update(legacy)
-+        transfer_info = login_response.get('transfer_info')
-+        if isinstance(transfer_info, list):
-+            for item in transfer_info:
-+                if not isinstance(item, dict):
-+                    continue
-+                item_params = item.get('params')
-+                if not isinstance(item_params, dict):
-+                    continue
-+                url = item.get('url')
-+                if url:
-+                    try:
-+                        self.session.post(url, data=item_params, timeout=15)
-+                    except requests.exceptions.RequestException:
-+                        pass
-+                for key, value in item_params.items():
-+                    params.setdefault(key, value)
-+        steam_id = None
-+        for key in ('steamid', 'steamID', 'steam_id', 'SteamID', 'steamId'):
-+            value = params.get(key)
-+            if value:
-+                steam_id = value
-+                break
-+        if steam_id is None:
-+            secure = self.session.cookies.get('steamLoginSecure')
-+            if secure and '||' in secure:
-+                steam_id = secure.split('||', 1)[0]
-+        if steam_id is not None:
-+            self.steam_id = SteamID(str(steam_id))
++        """LOCAL PATCH 2026-09-11 (steam 1.4.4 vs current Steam login flow).
++
++        Steam now answers /login/dologin with "transfer_info" (a list of
++        {url, params}) instead of the legacy flat "transfer_parameters" dict.
++        The original one-liner therefore raised KeyError: 'transfer_parameters'
++        *after* an otherwise successful password + 2FA login.
++
++        This version: accepts both response shapes, replays the settoken
++        transfers the official web flow performs, recovers the steamid from the
++        legacy dict, the transfer_info params, or the steamLoginSecure cookie
++        (iterating instead of cookies.get(), which raises CookieConflictError
++        because login() mirrors every cookie onto three domains), and never
++        raises — a missing steamid must not invalidate a good session.
++        """
++        try:
++            params = {}
++            legacy = login_response.get('transfer_parameters')
++            if isinstance(legacy, dict):
++                params.update(legacy)
++
++            transfer_info = login_response.get('transfer_info')
++            if isinstance(transfer_info, list):
++                for item in transfer_info:
++                    if not isinstance(item, dict):
++                        continue
++                    item_params = item.get('params')
++                    if not isinstance(item_params, dict):
++                        continue
++                    url = item.get('url')
++                    if url:
++                        try:
++                            self.session.post(url, data=item_params, timeout=15)
++                        except Exception:
++                            pass
++                    for key, value in item_params.items():
++                        params.setdefault(key, value)
++
++            # Key-name diagnostics only (never logs values). Set
++            # STEAM_CLI_DEBUG_LOGIN_KEYS=1 to dump the response skeleton.
++            if __import__('os').environ.get('STEAM_CLI_DEBUG_LOGIN_KEYS'):
++                try:
++                    with open('/tmp/steam_login_response_keys.txt', 'w') as fh:
++                        fh.write('top: %s\n' % sorted(login_response.keys()))
++                        if isinstance(transfer_info, list):
++                            for i, item in enumerate(transfer_info):
++                                if isinstance(item, dict):
++                                    ip = item.get('params')
++                                    fh.write('transfer_info[%d] keys=%s params=%s\n' % (
++                                        i, sorted(item.keys()),
++                                        sorted(ip.keys()) if isinstance(ip, dict) else '-'))
++                        fh.write('collected params: %s\n' % sorted(params.keys()))
++                except Exception:
++                    pass
++
++            steam_id = None
++            for key in ('steamid', 'steamID', 'steam_id', 'SteamID', 'steamId'):
++                if params.get(key):
++                    steam_id = params[key]
++                    break
++
++            if steam_id is None:
++                for cookie in self.session.cookies:
++                    if cookie.name == 'steamLoginSecure' and cookie.value and '||' in cookie.value:
++                        steam_id = cookie.value.split('||', 1)[0]
++                        break
++
++            if steam_id is None:
++                for cookie in self.session.cookies:
++                    if cookie.name == 'steamid' and cookie.value:
++                        steam_id = cookie.value
++                        break
++
++            if steam_id is not None:
++                self.steam_id = SteamID(str(steam_id))
++        except Exception:
++            pass
  
      def login(self, password='', captcha='', email_code='', twofactor_code='', language='english'):
          """Attempts web login and returns on a session with cookies set

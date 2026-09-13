@@ -1,5 +1,5 @@
---- webapi.py.orig-1.4.4	2026-09-12 18:11:23.834235314 +0800
-+++ /vol1/@appdata/trim.hermes/hermes/tools/steam-cli/.venv/lib/python3.11/site-packages/steam/webapi.py	2026-09-12 18:11:23.863570724 +0800
+--- steam/webapi.py.orig-1.4.4
++++ steam/webapi.py
 @@ -305,8 +305,16 @@
              islist = param['_array']
              optional = param['optional']
