@@ -13,6 +13,8 @@ Summary:
 | Store login helpers | store `/login/getrsakey/`, `/login/dologin/` | retired (HTML/404) | non-JSON response / `Method Not Allowed` |
 | CDK activation | `POST /account/registerkey` | `POST /account/ajaxregisterkey/` (JSON) | `endpoint_unavailable`, "unrecognized response" |
 | Reviews | `POST /profiles/<steamid>/recommended/` | `POST /friends/recommendgame` (JSON) | HTTP 200 + HTML counted as success — nothing was ever published |
+| Store region | every store call sent `l=english&cc=us` | resolved from the account page (`country_code`), cached daily | a CN account was quoted USD and got English text |
+| Recent review score | `appreviews?day_range=30` | parameter retired — sample the newest reviews client-side | "recent" numbers silently equal the all-time ones |
 | Wishlist read | `/wishlist/profiles/<id>/wishlistdata/` | `IWishlistService/GetWishlist/v1/` | HTTP 302 → JSON decode error |
 | Store app names | batched `api/appdetails?appids=1,2,3` | **one appid per request** | HTTP 400 on any list |
 | Full app list | `ISteamApps/GetAppList` | 404/403 (retired/restricted) | 404 |
@@ -142,6 +144,38 @@ filter could never match an account that writes Chinese. `steam review mine` and
 `review list --mine` now parse the account's own
 `/profiles/<steamid>/recommended/` page instead, which is authoritative.
 
+### Reading the summary
+
+`query_summary` still carries the useful part — `review_score` (band 0-9, e.g. 9 =
+Overwhelmingly Positive / 好评如潮, 5 = Mixed / 褒贬不一) plus the positive/negative/total
+counts. Two traps:
+
+- **`day_range` is retired.** `appreviews/<appid>?day_range=30&num_per_page=0` answers the
+  *all-time* summary, byte-identical to the same request without it, so a "recent reviews"
+  figure taken from it is silently wrong. `steam review summary --days N` therefore samples
+  client-side: `filter=recent` returns newest-first, so it walks pages until it crosses the
+  cut-off (exact for the window, or flagged `truncated` when the window holds more than the
+  400-review cap).
+- **Review text is double-escaped.** Newlines arrive as the two characters `\n`, not as a
+  line break, so anything that strips or re-wraps the text must normalise `\n`/`\r` first.
+- **The review listing collapses on obscure titles — three traps, all found by trying a small
+  game (Wenjia, 374 reviews; 2026-09-13):**
+  1. `filter=all` (the "most helpful" ranking) can be **all but empty**: Wenjia ranks exactly
+     **one** review that way, while `filter=recent` returns a full, correctly-sized page (100
+     of its 374, 65 up / 35 down). Anything that reads only `filter=all` will show a single
+     "sample" and look broken. Merge both filters.
+  2. `review_type=positive|negative` is **not honoured consistently** — a request for
+     `negative` has answered with three *up-voted* reviews. Split the samples client-side on
+     each review's own `voted_up`; never label a list by the parameter you asked for.
+  3. **The first page needs an explicit `cursor=*`.** Without a cursor Steam can answer with a
+     single "featured" review and a cursor that never advances, so paging loops forever on the
+     same item. Seed with `cursor=*` and stop when a page adds nothing new.
+
+Titles: the community `SearchApps` index cannot be trusted for CJK (`艾尔登法环` → `[]`,
+`黑神话` → a knock-off), so `resolve_appid()` sends CJK terms to
+`storesearch` with `l=schinese&cc=cn` first — that returns the real game (`黑神话` →
+2358720, `艾尔登法环` → 1245620).
+
 Verify a **just**-published review against that profile page or against the
 review's own permalink (`/profiles/<steamid>/recommended/<appid>/`) fetched
 **without cookies** — the public feed lags by minutes, and the profile page can
@@ -203,8 +237,27 @@ licenses page, where each row carries the acquisition **date and method**
   Do not retry-loop it.
 - `steam launch` uses the `steam://` protocol, which is meaningless on a headless
   host.
-- Store requests hardcode `l=english&cc=us`, so results and prices are US/English
-  regardless of the account's region.
+- Store requests used to hardcode `l=english&cc=us`; they now follow the account
+  (see the region row above).
+
+## 9. Store region and language — no longer hardcoded
+
+Every store call sent `l=english&cc=us`, so a Chinese account was quoted USD prices
+and English names. Two things had to be established first (measured 2026-09-13):
+
+- **Steam does not reliably infer the region when `cc` is omitted.** With a logged-in
+  session, `appdetails?appids=1144200` answers **CNY**, the same request for appid 220
+  answers **USD**, and adding `filters=price_overview` flips 1144200 back to **USD**.
+  Never rely on "let Steam decide".
+- **The account page is authoritative**: `store.steampowered.com/account/` embeds
+  `data-userinfo="{...&quot;country_code&quot;:&quot;CN&quot;...}"` (plus a visible
+  `Country:` row), and it is the page `is_session_valid()` already fetches.
+
+`steam_cli/region.py` resolves region/language as: explicit override
+(`STEAM_CLI_CC` / `STEAM_CLI_LANG`, or `steam config region set`) → the account page
+(cached for a day in `<config>/region.json`) → `us` / `english`. Language defaults to
+the country's store language (`cn` → `schinese`, `jp` → `japanese`, …). Call sites pass
+`region.store_params({...})` instead of literal `cc`/`l`.
 
 ## Reproducing the checks locally
 

@@ -91,6 +91,11 @@ Activation & reviews
 - `steam review post <appid> --text "..." [--recommend|--not-recommend] [--language/-L <code>] [--private] [--verify/--no-verify] [--dry-run]`
 - `steam review list <appid> [--mine] [--language/-L <code>|all] [--limit/-n N]`
 - `steam review mine` — every review this account has posted
+- `steam review summary <appid|title> [--language/-L all] [--samples/-s 8] [--days/-d 30] [--json]`
+  — the review score band (好评如潮 / 特别好评 / 褒贬不一 …), the recent picture, and the
+  most-helpful positive/negative reviews. Use it to answer "how is this game received": read the
+  samples and distill 好在哪 / 不好在哪 yourself; real appids (2807960) and titles ("黑神话", "Elden
+  Ring") both work.
 
 Friends, stats & more
 - `steam friends list [--online] | playing <appid> | recently-played | invite-link [--refresh]`
@@ -107,8 +112,10 @@ Friends, stats & more
   later with `tools/steam_remint_session.py` (refresh token; no password, no 2FA).
 - `steam friends invite-link` returns **403** (`steamcommunity.com/actions/QuickInviteLink`
   changed server-side). Do not retry-loop it.
-- Store requests hardcode `l=english&cc=us`: Chinese search terms often return no
-  rows and prices are USD. Retry with the English name or use an appid; do not
+- Store requests follow the account's store region and language (auto-detected,
+  cached a day; `steam config region set|show|clear`, or `--cc/--lang` per call).
+  For a region whose search index lacks a translated name, fall back to the English
+  title or an appid; do not
   conclude "the game does not exist" from an empty Chinese search.
 - `steam launch` needs a desktop Steam client, so it is pointless on a headless host.
 - `steam recommend` / `radar` issue one price request per appid and are slow.

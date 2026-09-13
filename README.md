@@ -21,7 +21,7 @@ safety policy.
 | Library | `steam library list`, `library has` |
 | Wishlist | `steam wishlist list / add / remove / on-sale` |
 | Activation | `steam activate <cdk> [--batch file] [--dry-run] [--yes]` |
-| Reviews | `steam review post`, `review list` |
+| Reviews | `steam review summary`, `steam review post`, `review list`, `review mine` |
 | Friends | `steam friends list / playing / recently-played / invite-link`, `steam profile` |
 | Stats | `steam stats summary`, `stats game` |
 | More | `steam launch`, `achievements`, `recommend` |
@@ -76,7 +76,12 @@ Practical consequences:
   timestamp, so a library listing cannot prove when something was added.
 - `steam friends invite-link` currently returns **403** — Steam changed that
   endpoint server-side.
-- Store queries hardcode `l=english&cc=us`: names and prices are US/English.
+- Store queries follow **your account's region and language** (detected from the
+  account page, cached for a day): a Chinese account gets ¥ prices and Chinese
+  store text. Override per call with `--cc/--lang` (e.g. `steam price 1144200 --cc us`)
+  or permanently with `steam config region set cn --lang schinese`; `STEAM_CLI_CC` /
+  `STEAM_CLI_LANG` do the same for one shell. `steam config region show` prints what is
+  in use and where it came from.
 - A couple of quirks in the installed `steam` package need local patches; see
   [`patches/`](patches/README.md).
 
