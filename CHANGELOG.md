@@ -2,6 +2,53 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.7] - 2026-09-13
+
+### Bug Fixes
+
+- Make a clean install work, and rewrite the README for newcomers
+  A fresh user's first ten minutes exposed three things the documentation and the code
+  got wrong.
+  
+  **A clean install could not use the library features at all.** ValvePython validates
+  every call against Steam's `GetSupportedAPIList` metadata, which still marks parameters
+  as required that the live endpoints accept as omitted, so `steam stats summary` died
+  client-side with `Method requires 'appids_filter' to be set`. The only remedy
+  documented was to hand-patch site-packages — which no user should have to do to a
+  dependency. `src/steam_cli/_compat.py` now flags those parameters optional right after
+  the metadata loads (same effect as the patch, applied from inside the package), and
+  `steam login` no longer needs the other patch because it stopped using the retired
+  `WebAuth` path in 0.2.6. `patches/` is historical reference now.
+  
+  **The credential table was wrong.** Library, stats, friends, wishlist and achievements
+  need the session as well as the API key — the key authorises the call, the session
+  supplies the SteamID — so a newcomer following the README got `not_authenticated`.
+  The tables in both READMEs, and the command docs behind them, now say what each command
+  actually needs, plus a troubleshooting table mapping every structured error to the
+  command that fixes it.
+  
+  **Errors pointed at a command that does not exist.** The hints in `errors.py` said
+  `steam auth login` / `steam auth set-key`; they now name `steam login`,
+  `steam set-key` and `steam refresh --remint`.
+  
+  Also, `steam search black myth` used to die with "Got unexpected extra arguments" unless
+  quoted: name arguments are variadic now (`client.join_terms()`), which matters because
+  every README example involves a multi-word game name.
+  
+  The READMEs were rewritten newcomer-first: what you need, install (no patching), a
+  30-second try-it, connecting an account, the command table, reading a game's reception,
+  safety, troubleshooting, and a repository-layout table that says which directories are
+  irrelevant to *using* the CLI. Contributor material moved behind links to
+  CONTRIBUTING.md / docs/development.md / docs/releases/README.md instead of being
+  duplicated in the README, where it drifted.
+
+
+### Documentation
+
+- **releases:** How to hide a published release (gh release edit --draft)
+
+- **releases:** V0.2.7 notes and version bump
+
 ## [0.2.6] - 2026-09-13
 
 ### Bug Fixes
