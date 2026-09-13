@@ -8,6 +8,7 @@ import os
 
 import httpx
 
+from .. import region
 from ..errors import NetworkError
 
 _STORE_DETAILS = "https://store.steampowered.com/api/appdetails"
@@ -20,12 +21,13 @@ def itad_available() -> bool:
     return bool(os.environ.get("STEAM_CLI_ITAD_KEY"))
 
 
-def _appdetails(appid: int, cc: str = "us", lang: str = "english") -> dict:
+def _appdetails(appid: int, cc: str | None = None, lang: str | None = None) -> dict:
+    """Store details for one app; region/language follow the account by default."""
     try:
         with httpx.Client(timeout=15) as client:
             resp = client.get(
                 _STORE_DETAILS,
-                params={"appids": appid, "cc": cc, "l": lang},
+                params=region.store_params({"appids": appid, "cc": cc, "l": lang}),
                 headers={"User-Agent": "steam-cli/0.1"},
             )
             resp.raise_for_status()
@@ -38,8 +40,8 @@ def _appdetails(appid: int, cc: str = "us", lang: str = "english") -> dict:
     return entry["data"]
 
 
-def current_price(appid: int, cc: str = "us") -> dict:
-    data = _appdetails(appid, cc=cc)
+def current_price(appid: int, cc: str | None = None, lang: str | None = None) -> dict:
+    data = _appdetails(appid, cc=cc, lang=lang)
     price = data.get("price_overview") or {}
     discount = price.get("discount_percent", 0)
     return {
@@ -82,7 +84,7 @@ def _itad_lookup(appid: int) -> str | None:
     return game.get("id")
 
 
-def price_history(appid: int, cc: str = "us") -> dict | None:
+def price_history(appid: int, cc: str | None = None) -> dict | None:
     itad_id = _itad_lookup(appid)
     if not itad_id:
         return None
@@ -92,7 +94,7 @@ def price_history(appid: int, cc: str = "us") -> dict | None:
                 _ITAD_PRICES,
                 params={
                     "key": _itad_key(),
-                    "country": cc.upper(),
+                    "country": (cc or region.country()).upper(),
                     "shops": str(_STEAM_SHOP_ID),
                 },
                 json=[itad_id],

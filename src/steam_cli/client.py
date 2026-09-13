@@ -10,10 +10,12 @@ from urllib.parse import quote
 import httpx
 from steam.webapi import WebAPI
 
-from . import auth
+from . import auth, region
 from .errors import ApiKeyMissingError, NetworkError
 
 _APPID_RE = re.compile(r"^\d+$")
+# CJK titles: see resolve_appid() — the community search index cannot be trusted for them.
+_CJK_RE = re.compile(r"[\u3400-\u9fff\u3040-\u30ff\uac00-\ud7af]")
 
 
 class SteamClient:
@@ -37,6 +39,25 @@ def resolve_appid(term: str) -> int:
     term = term.strip()
     if _APPID_RE.match(term):
         return int(term)
+    # A CJK title goes through the Chinese store search first: the community
+    # SearchApps index answers [] for 艾尔登法环/战地6 and can even return a
+    # knock-off for 黑神话, while storesearch with l=schinese&cc=cn returns the
+    # real game (黑神话 → 2358720, 艾尔登法环 → 1245620, verified 2026-09-13).
+    if _CJK_RE.search(term):
+        hits = _store_search(term, lang="schinese", cc="cn")
+        if hits:
+            return int(hits[0]["appid"])
+    results = _search_apps(term)
+    if not results:
+        results = _store_search(term)
+    if not results and not _CJK_RE.search(term):
+        results = _store_search(term, lang="schinese", cc="cn")
+    if not results:
+        raise NetworkError(f"no app found for {term!r}")
+    return int(results[0]["appid"])
+
+
+def _search_apps(term: str) -> list[dict]:
     try:
         with httpx.Client(timeout=10) as client:
             resp = client.get(
@@ -44,20 +65,18 @@ def resolve_appid(term: str) -> int:
                 headers={"User-Agent": "Mozilla/5.0 (steam-cli/0.1)"},
             )
             resp.raise_for_status()
-            results = resp.json()
+            return list(resp.json())
     except (httpx.HTTPError, ValueError):
-        results = _store_search(term)
-    if not results:
-        raise NetworkError(f"no app found for {term!r}")
-    return int(results[0]["appid"])
+        return []
 
 
-def _store_search(term: str) -> list[dict]:
+def _store_search(term: str, lang: str | None = None, cc: str | None = None) -> list[dict]:
+    """Store search. Region/language default to the account's (see region.py)."""
     try:
         with httpx.Client(timeout=10) as client:
             resp = client.get(
                 "https://store.steampowered.com/api/storesearch/",
-                params={"term": term, "l": "english", "cc": "us"},
+                params=region.store_params({"term": term, "l": lang, "cc": cc}),
                 headers={"User-Agent": "steam-cli/0.1"},
             )
             resp.raise_for_status()
@@ -72,7 +91,7 @@ def resolve_name(appid: int) -> str:
         with httpx.Client(timeout=10) as client:
             resp = client.get(
                 "https://store.steampowered.com/api/appdetails",
-                params={"appids": appid, "cc": "us", "l": "english"},
+                params=region.store_params({"appids": appid}),
                 headers={"User-Agent": "steam-cli/0.1"},
             )
             resp.raise_for_status()

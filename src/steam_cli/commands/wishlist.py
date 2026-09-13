@@ -22,7 +22,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from .. import auth
+from .. import auth, region
 from ..client import resolve_appid
 from ..errors import ForbiddenError, NetworkError
 from ..utils.price import current_price
@@ -84,7 +84,7 @@ def _fetch_name(appid: int) -> tuple[int, str]:
     try:
         resp = requests.get(
             STORE_DETAILS_URL,
-            params={"appids": str(appid), "l": "english", "cc": "us"},
+            params=region.store_params({"appids": str(appid)}),
             timeout=20,
         )
         payload = resp.json()

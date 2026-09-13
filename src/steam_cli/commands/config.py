@@ -12,7 +12,7 @@ import httpx
 import typer
 from rich.console import Console
 
-from .. import auth
+from .. import auth, region
 from ..errors import InvalidFormatError
 
 console = Console()
@@ -79,6 +79,48 @@ def register(app: typer.Typer) -> None:
 
     proxy_group = typer.Typer(help="Configure an HTTP(S)/SOCKS proxy for all Steam requests")
     group.add_typer(proxy_group, name="proxy")
+
+    region_group = typer.Typer(
+        help="Store region/language used for prices and store text (default: follow the account)"
+    )
+    group.add_typer(region_group, name="region")
+
+    @region_group.command("show")
+    def region_show():
+        """Show the region/language in use and where they come from."""
+        info = region.region_info()
+        console.print(f"country:  {info['country']}")
+        console.print(f"language: {info['language']}")
+        detail = info["source"]
+        if info["detected"]:
+            detail += f" (detected {info['detected']})"
+        console.print(f"source:   {detail}")
+        if info["explicit_country"] or info["explicit_language"]:
+            console.print(
+                f"override: cc={info['explicit_country'] or '-'} "
+                f"lang={info['explicit_language'] or '-'}"
+            )
+
+    @region_group.command("set")
+    def region_set(
+        country: str = typer.Argument(None, help="two-letter store country, e.g. cn"),
+        language: str = typer.Option(None, "--lang", help="store language code, e.g. schinese"),
+    ):
+        """Pin the store region/language instead of following the account."""
+        if not country and not language:
+            raise InvalidFormatError("provide a country and/or --lang")
+        region.set_region(country, language)
+        console.print(
+            f"[green]Region pinned:[/green] cc={region.country()} lang={region.language()}"
+        )
+
+    @region_group.command("clear")
+    def region_clear():
+        """Follow the account again (drops overrides and the cached detection)."""
+        region.clear_region()
+        console.print(
+            f"Region overrides cleared; now cc={region.country()} lang={region.language()}"
+        )
 
     @proxy_group.command("set")
     def proxy_set(

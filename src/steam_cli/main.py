@@ -9,7 +9,7 @@ import typer
 from rich.console import Console
 from steam.webauth import WebAuth
 
-from . import auth
+from . import auth, region
 from .errors import NetworkError, NotAuthenticatedError, SteamError
 
 app = typer.Typer(
@@ -50,6 +50,11 @@ def status():
         rows.append(("API key valid", "yes" if s["api_key_valid"] else "no"))
     for k, v in rows:
         console.print(f"{k}: {v}")
+    info = region.region_info()
+    console.print(
+        f"Region: {info['country']} ({info['language']})"
+        + (f" [dim]— {info['source']}[/dim]" if info["source"] else "")
+    )
 
 
 @app.command()

@@ -12,13 +12,13 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from .. import auth
+from .. import auth, region
 from ..client import SteamClient, resolve_name
 from ..errors import NetworkError
 
 console = Console()
 
-_STORE_SPECIALS = "https://store.steampowered.com/api/featuredcategories/?l=english&cc=us"
+_STORE_SPECIALS = "https://store.steampowered.com/api/featuredcategories/"
 _DETAILS = "https://store.steampowered.com/api/appdetails"
 _REQUEST_GAP = 0.1
 
@@ -28,7 +28,7 @@ def _app_genres(appid: int) -> set[str]:
         with httpx.Client(timeout=15) as client:
             resp = client.get(
                 _DETAILS,
-                params={"appids": appid, "l": "english", "cc": "us"},
+                params=region.store_params({"appids": appid}),
                 headers={"User-Agent": "steam-cli/0.1"},
             )
             resp.raise_for_status()

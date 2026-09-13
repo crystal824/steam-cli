@@ -9,7 +9,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from .. import auth
+from .. import auth, region
 from ..client import SteamClient, resolve_appid
 from ..errors import NetworkError
 from ..utils.price import current_price, itad_available, price_history
@@ -51,7 +51,7 @@ def register(app: typer.Typer) -> None:
         """Search the Steam store."""
         data = _get_json(
             _STORE_SEARCH,
-            params={"term": query, "l": "english", "cc": "us", "count": limit},
+            params=region.store_params({"term": query, "count": limit}),
         )
         hits = data.get("items", [])
         if type != "all":
@@ -71,7 +71,7 @@ def register(app: typer.Typer) -> None:
         appid = resolve_appid(appid_or_name)
         payload = _get_json(
             _STORE_DETAILS,
-            params={"appids": appid, "l": "english", "cc": "us"},
+            params=region.store_params({"appids": appid}),
         )
         entry = payload.get(str(appid)) or {}
         if not entry.get("success"):
@@ -115,11 +115,17 @@ def register(app: typer.Typer) -> None:
             console.print(f"recommendations: {recs}")
 
     @app.command()
-    def price(appid_or_name: str) -> None:
+    def price(
+        appid_or_name: str,
+        cc: str = typer.Option(None, "--cc", help="price region (default: your store region)"),
+        lang: str = typer.Option(
+            None, "--lang", help="store language (default: your store language)"
+        ),
+    ) -> None:
         """Show current and historical low price for an app."""
         appid = resolve_appid(appid_or_name)
-        cur = current_price(appid)
-        console.print(f"[bold]{cur['name']}[/bold]")
+        cur = current_price(appid, cc=cc, lang=lang)
+        console.print(f"[bold]{cur['name']}[/bold] [dim]({(cc or region.country()).upper()})[/dim]")
         if cur["free"]:
             console.print("price: Free to Play")
         else:
@@ -128,7 +134,7 @@ def register(app: typer.Typer) -> None:
                 line += f"  ([green]-{cur['discount_percent']}%[/green])"
             console.print(line)
 
-        hist = price_history(appid)
+        hist = price_history(appid, cc=cc)
         if hist is not None and hist.get("historical_low") is not None:
             low = hist["historical_low"]
             low_currency = hist.get("historical_low_currency") or ""
