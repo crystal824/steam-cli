@@ -72,7 +72,10 @@ when the refresh token itself has expired (`rtExpiry` in the settoken response).
 patched version accepts both shapes (`transfer_parameters` and `transfer_info`),
 never raises, and can recover the SteamID from the `steamLoginSecure` cookie —
 whose value is URL-encoded `<steamid>%7C%7C<token>`. See
-`patches/steam-1.4.4-webauth-transfer-info.patch`.
+`patches/steam-1.4.4-webauth-transfer-info.patch` — kept for reference only: since
+2026-09-13 `steam login` implements the flow itself (`src/steam_cli/modern_login.py`)
+and no longer touches `WebAuth`, so neither this patch nor the one below is needed to
+use the CLI.
 
 ### 2026-09-13 — the flow now lives in the CLI
 
@@ -235,9 +238,12 @@ ValvePython's `WebAPI` validates calls against `GetSupportedAPIList` and refuses
 to send when a parameter marked "required" is missing. That metadata now disagrees
 with the live endpoints: `IPlayerService/GetOwnedGames` demands `appids_filter`,
 then `include_free_sub`, while the identical request without them returns HTTP 200
-and the complete library. The local patch
-(`patches/steam-1.4.4-webapi-required-params.patch`) skips absent parameters and
-lets Steam do the real validation.
+and the complete library. The workaround now ships **inside the package**: `src/steam_cli/_compat.py` marks every
+parameter `optional` right after the metadata is loaded, so absent parameters are simply
+not sent and Steam validates for real. Without it, a clean `pip install` could not run
+`stats summary` / `library list` at all (`Method requires 'appids_filter' to be set`) —
+which is precisely why it no longer lives in a patch a user has to apply by hand
+(`patches/steam-1.4.4-webapi-required-params.patch` is the historical diff).
 
 ## 7. Verifying that something landed
 

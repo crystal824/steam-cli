@@ -44,6 +44,11 @@ src = ["src", "tests"]
 # keyring cleanup is deliberate defensive code in this project.
 ignore = ["BLE001", "S110"]
 
+[tool.ruff.lint.flake8-bugbear]
+# typer reads the signature, so `= typer.Argument(...)` / `typer.Option(...)` in a
+# default is the documented pattern, not a mutable-default hazard.
+extend-immutable-calls = ["typer.Argument", "typer.Option"]
+
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S101"]
 

@@ -34,6 +34,21 @@ class SteamClient:
         return self._api
 
 
+def join_terms(parts: str | list[str] | tuple[str, ...] | None) -> str:
+    """Join a positional `<name>` that typer collected as a list of words.
+
+    `steam search black myth` used to die with "Got unexpected extra argument(s) (myth)"
+    unless the user quoted it — a poor first impression for a CLI whose examples all
+    involve multi-word game names. Every command that accepts a name runs its
+    positional argument through here.
+    """
+    if isinstance(parts, str):
+        return parts.strip()
+    if not parts:
+        return ""
+    return " ".join(str(part) for part in parts).strip()
+
+
 @lru_cache(maxsize=2048)
 def resolve_appid(term: str) -> int:
     term = term.strip()

@@ -11,7 +11,7 @@ from rich.console import Console
 from rich.table import Table
 
 from .. import auth
-from ..client import SteamClient, resolve_appid, resolve_name
+from ..client import SteamClient, join_terms, resolve_appid, resolve_name
 from ..errors import NetworkError
 
 console = Console()
@@ -86,11 +86,11 @@ def list_games(
 
 
 @group.command()
-def has(appid_or_name: str) -> None:
+def has(appid_or_name: list[str]) -> None:
     """Check whether a game is in the library."""
     client = _client()
     games = _owned_games(client)
-    appid = resolve_appid(appid_or_name)
+    appid = resolve_appid(join_terms(appid_or_name))
     owned = next((g for g in games if g.get("appid") == appid), None)
     if owned is not None:
         console.print(f"[green]yes[/green] — {owned.get('name') or appid} ({appid})")

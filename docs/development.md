@@ -27,6 +27,8 @@ src/steam_cli/
 ├── region.py          # 账号区域与语言解析（country_code → cc/lang，缓存 1 天）
 ├── client.py          # WebAPI 封装 + appid/名称解析（含 CJK 特例）
 ├── errors.py          # 结构化错误类型（main 据此输出 `code: message`）
+├── modern_login.py    # Steam 现代登录流程（`steam login` / `refresh --remint` 的实现）
+├── _compat.py         # 导入时绕过第三方库的过时元数据校验（新装环境免打补丁）
 ├── commands/          # 一命令一模块，各自 register(app)
 │   ├── store.py library.py wishlist.py friends.py stats.py
 │   ├── activate.py review.py achievements.py recommend.py launch.py
@@ -60,6 +62,8 @@ patches/               # 第三方库（steam 1.4.4）补丁
 ## 5. 新增一个命令
 
 1. 在 `commands/` 加模块或给现有模块加 `@app.command()`；帮助文本写清**需要哪一档凭据**。
+   - 接收游戏名/标题的位置参数请写成 `list[str]` 并用 `client.join_terms()` 拼接，这样
+     `steam search black myth` 不加引号也能用（新用户的第一条命令最容易踩）。
 2. 错误一律抛 `errors.py` 的结构化类型，`main.py` 会渲染成 `code: message`。
 3. 网络失败要能区分：`network_error` / `session_expired` / `api_key_missing` / `not_authenticated` / 业务拒绝（如 `review_rejected`）。
 4. 写离线测试（`FakeResponse`/`FakeClient` 或 monkeypatch `httpx.Client`），**不打真实网络**。

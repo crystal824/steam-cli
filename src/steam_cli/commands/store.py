@@ -10,7 +10,7 @@ from rich.console import Console
 from rich.table import Table
 
 from .. import auth, region
-from ..client import SteamClient, resolve_appid
+from ..client import SteamClient, join_terms, resolve_appid
 from ..errors import NetworkError
 from ..utils.price import current_price, itad_available, price_history
 
@@ -44,20 +44,21 @@ def _format_ts(ts: float | None) -> str:
 def register(app: typer.Typer) -> None:
     @app.command()
     def search(
-        query: str,
+        query: list[str],
         limit: int = 10,
         type: str = typer.Option("all", help="game|dlc|software|all"),
     ) -> None:
         """Search the Steam store."""
+        term = join_terms(query)
         data = _get_json(
             _STORE_SEARCH,
-            params=region.store_params({"term": query, "count": limit}),
+            params=region.store_params({"term": term, "count": limit}),
         )
         hits = data.get("items", [])
         if type != "all":
             hits = [h for h in hits if h.get("type") == type]
 
-        table = Table(title=f"search: {query}")
+        table = Table(title=f"search: {term}")
         table.add_column("AppID")
         table.add_column("Name")
         table.add_column("Type")
@@ -66,9 +67,10 @@ def register(app: typer.Typer) -> None:
         console.print(table)
 
     @app.command("app")
-    def app_details(appid_or_name: str) -> None:
+    def app_details(appid_or_name: list[str]) -> None:
         """Show details for an app."""
-        appid = resolve_appid(appid_or_name)
+        target = join_terms(appid_or_name)
+        appid = resolve_appid(target)
         payload = _get_json(
             _STORE_DETAILS,
             params=region.store_params({"appids": appid}),
@@ -79,7 +81,7 @@ def register(app: typer.Typer) -> None:
             return
         data = entry.get("data") or {}
 
-        console.print(f"[bold]{data.get('name', appid_or_name)}[/bold]")
+        console.print(f"[bold]{data.get('name', target)}[/bold]")
         console.print(f"type: {data.get('type', '-')}")
         console.print("free: " + ("yes" if data.get("is_free") else "no"))
 
@@ -116,14 +118,14 @@ def register(app: typer.Typer) -> None:
 
     @app.command()
     def price(
-        appid_or_name: str,
+        appid_or_name: list[str],
         cc: str = typer.Option(None, "--cc", help="price region (default: your store region)"),
         lang: str = typer.Option(
             None, "--lang", help="store language (default: your store language)"
         ),
     ) -> None:
         """Show current and historical low price for an app."""
-        appid = resolve_appid(appid_or_name)
+        appid = resolve_appid(join_terms(appid_or_name))
         cur = current_price(appid, cc=cc, lang=lang)
         console.print(f"[bold]{cur['name']}[/bold] [dim]({(cc or region.country()).upper()})[/dim]")
         if cur["free"]:

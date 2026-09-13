@@ -1,5 +1,14 @@
 # patches/
 
+> **Historical — nothing here is needed to use `steam-cli`.** Both issues are worked
+> around *inside* the package now: `src/steam_cli/_compat.py` relaxes ValvePython's
+> stale API metadata, and `src/steam_cli/modern_login.py` replaced the retired
+> `WebAuth` login path. `pip install` and go.
+>
+> The diffs are kept for two reasons: they document exactly what `steam` 1.4.4 gets
+> wrong against today's Steam, and they are still handy if you drive that library
+> directly instead of through this CLI.
+
 Diffs against the **installed** third-party library (`steam` 1.4.4, the newest
 release on PyPI). They are not part of the published package — they exist because
 the library lags behind Steam's current endpoints, and a rebuilt virtualenv needs

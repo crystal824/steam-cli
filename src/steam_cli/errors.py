@@ -15,12 +15,12 @@ class SteamError(Exception):
 
 class NotAuthenticatedError(SteamError):
     code = "not_authenticated"
-    hint = "not logged in; run `steam auth login` first"
+    hint = "not logged in; run `steam login` first (or `steam set-key <key>` for read-only queries)"
 
 
 class ApiKeyMissingError(SteamError):
     code = "api_key_missing"
-    hint = "no Web API key configured; run `steam auth set-key <key>`"
+    hint = "no Web API key configured; run `steam set-key <key>`"
 
 
 class InvalidFormatError(SteamError):
@@ -50,7 +50,7 @@ class NetworkError(SteamError):
 
 class SessionExpiredError(SteamError):
     code = "session_expired"
-    hint = "your login session has expired; run `steam auth login`"
+    hint = "your login session has expired; run `steam refresh --remint` (no password needed)"
 
 
 class EndpointUnavailableError(SteamError):

@@ -342,3 +342,49 @@ def test_verify_session_needs_the_landing_page_not_just_a_200():
     state = modern_login.verify_session(session)
     assert state["https://store.steampowered.com/account/"]["authed"] is True
     assert state["https://steamcommunity.com/my/"]["authed"] is True
+
+
+PAYLOAD = {
+    "apilist": {
+        "interfaces": [
+            {
+                "name": "IPlayerService",
+                "methods": [
+                    {
+                        "name": "GetOwnedGames",
+                        "version": 1,
+                        "httpmethod": "GET",
+                        "parameters": [
+                            {"name": "key", "type": "string", "optional": False},
+                            {"name": "steamid", "type": "uint64", "optional": False},
+                            {"name": "appids_filter", "type": "string", "optional": False},
+                        ],
+                    }
+                ],
+            }
+        ]
+    }
+}
+
+
+def test_webapi_metadata_is_relaxed_on_import():
+    """Regression: ValvePython enforces Steam's `GetSupportedAPIList` metadata, which
+    marks parameters as required that the live endpoints accept as omitted, so a clean
+    install could not run `stats summary` / `library list` without patching
+    site-packages by hand (`Method requires 'appids_filter' to be set`).
+
+    Exercised against the real library with a minimal API-list payload — no network.
+    """
+    from steam.webapi import WebAPI
+
+    from steam_cli import WEBAPI_METADATA_RELAXED, _compat
+
+    assert WEBAPI_METADATA_RELAXED is True
+    assert getattr(WebAPI, "_steam_cli_relaxed", False) is True
+    assert _compat.relax_webapi_param_validation() is True  # idempotent, never re-wraps
+
+    api = WebAPI(key="not-used", auto_load_interfaces=False)
+    api.load_interfaces(PAYLOAD)
+    params = api.interfaces[0].methods[0].parameters
+    assert params["appids_filter"]["optional"] is True  # was False in the metadata
+    assert params["steamid"]["optional"] is True

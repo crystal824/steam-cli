@@ -14,7 +14,7 @@ from rich.console import Console
 from rich.table import Table
 
 from .. import auth, region
-from ..client import resolve_appid, resolve_name
+from ..client import join_terms, resolve_appid, resolve_name
 from ..errors import (
     InvalidFormatError,
     NetworkError,
@@ -700,7 +700,7 @@ def register(app: typer.Typer) -> None:
 
     @group.command("summary")
     def summary(
-        appid: str = typer.Argument(..., help="AppID or game title"),
+        appid: list[str] = typer.Argument(..., help="AppID or game title"),
         language: str = typer.Option("all", "--language", "-L", help="Language, or 'all'"),
         samples: int = typer.Option(
             8, "--samples", "-s", help="Positive/negative samples (0 = none)"
@@ -709,7 +709,8 @@ def register(app: typer.Typer) -> None:
         as_json: bool = typer.Option(False, "--json", help="Machine-readable output"),
     ):
         """Review score (好评如潮 / 褒贬不一 …) plus most-helpful pros/cons samples."""
-        resolved = resolve_appid(appid)
+        target = join_terms(appid)
+        resolved = resolve_appid(target)
         try:
             name = resolve_name(int(resolved))
         except SteamError:
