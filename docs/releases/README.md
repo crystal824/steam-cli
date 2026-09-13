@@ -52,6 +52,24 @@ release pages are left as they are.
 CI then builds both artifacts, publishes the GitHub Release using your notes, and
 commits the regenerated `CHANGELOG.md` back to `main`.
 
+## Hiding a published release
+
+Old releases can be hidden without deleting them: a **draft** keeps its tag (so the
+`compare/…` links in later notes still resolve) while its body and assets disappear from
+the public view.
+
+```bash
+gh release edit v0.2.5 --draft      # hide
+gh release edit v0.2.5 --draft=false # show again
+gh release list --limit 20          # drafts appear only for accounts with push access
+```
+
+This needs the GitHub API (a PAT, or the `gh` CLI — the device-flow login needs no token
+of your own). SSH deploy keys and GPG signatures cannot do it: they only push and sign
+git refs. Note that hiding a release does **not** hide its tag message or the matching
+`docs/releases/<tag>.md` in this repository — those stay public, so keep them free of
+anything you would not publish.
+
 ## Correcting the notes of a published release
 
 Pushing a tag is what makes CI publish notes, and a tag runs the workflow file stored
