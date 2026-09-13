@@ -26,6 +26,7 @@ KEY_SESSION = "web_session"
 KEY_SESSION_ID = "session_id"
 KEY_STEAM_ID = "steam_id"
 KEY_USERNAME = "username"
+KEY_REFRESH_TOKEN = "refresh_token"
 KEY_PROXY = "proxy_url"
 
 CONFIG_DIR = Path(os.environ.get("STEAM_CLI_HOME", Path.home() / ".config" / "steam-cli"))
@@ -247,8 +248,48 @@ def cookie_value(session: requests.Session, name: str) -> str:
 
 
 def clear_session() -> None:
+    """Drop the session cookies.
+
+    The refresh token is deliberately **kept**: it is what lets
+    ``steam refresh --remint`` (or tools/steam_remint_session.py) rebuild a session
+    with no password and no 2FA. Use :func:`clear_api_key` + ``steam revoke-all`` to
+    wipe everything.
+    """
     for key in (KEY_SESSION, KEY_SESSION_ID, KEY_STEAM_ID, KEY_USERNAME):
         _keyring_delete(key)
+    _invalidate_status()
+
+
+def get_username() -> str | None:
+    return _keyring_get(KEY_USERNAME)
+
+
+def get_refresh_token() -> str | None:
+    return _keyring_get(KEY_REFRESH_TOKEN)
+
+
+def persist_session(
+    cookies: dict[str, list[dict]],
+    *,
+    username: str,
+    session_id: str = "",
+    steam_id: str = "",
+    refresh_token: str | None = None,
+) -> None:
+    """Store a session assembled outside ValvePython (see :mod:`steam_cli.modern_login`).
+
+    ``save_session()`` above takes a ``WebAuth`` instance; modern logins build the
+    cookie jar themselves, so they land here instead.
+    """
+    _keyring_set(KEY_SESSION, json.dumps(cookies))
+    if session_id:
+        _keyring_set(KEY_SESSION_ID, session_id)
+    if steam_id:
+        _keyring_set(KEY_STEAM_ID, steam_id)
+    if username:
+        _keyring_set(KEY_USERNAME, username)
+    if refresh_token:
+        _keyring_set(KEY_REFRESH_TOKEN, refresh_token)
     _invalidate_status()
 
 
@@ -295,18 +336,25 @@ def is_logged_in() -> bool:
     return load_session() is not None
 
 
+def probe_authed(session: requests.Session, url: str, timeout: int = 10) -> bool:
+    """Is `url` reachable *authenticated*?
+
+    Redirects must be followed and the landing URL inspected: the store answers a
+    first request to `/account/` with a 302 to itself while it bootstraps its session
+    cookies, so the old "allow_redirects=False and require 200" probe reported valid
+    sessions as expired (and sent people off to re-login for nothing).
+    """
+    resp = session.get(url, timeout=timeout, allow_redirects=True)
+    return resp.status_code == 200 and "/login/" not in str(resp.url)
+
+
 def is_session_valid() -> bool:
     state = load_session()
     if state is None:
         return False
     try:
         wa = restore_webauth(state)
-        resp = wa.session.get(
-            "https://store.steampowered.com/account/",
-            timeout=10,
-            allow_redirects=False,
-        )
-        return resp.status_code == 200
+        return probe_authed(wa.session, "https://store.steampowered.com/account/")
     except requests.RequestException:
         return False
 

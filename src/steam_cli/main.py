@@ -4,13 +4,11 @@ from __future__ import annotations
 
 import sys
 
-import requests
 import typer
 from rich.console import Console
-from steam.webauth import WebAuth
 
-from . import auth, region
-from .errors import NetworkError, NotAuthenticatedError, SteamError
+from . import auth, modern_login, region
+from .errors import NotAuthenticatedError, SteamError
 
 app = typer.Typer(
     name="steam",
@@ -23,17 +21,29 @@ console = Console()
 
 
 @app.command()
-def login(username: str = typer.Option(None, "--username", "-u", help="Steam account name")):
-    """Interactive login (handles Steam Guard / email / captcha)."""
-    name = username or typer.prompt("Steam username")
-    wa = WebAuth(name)
-    try:
-        wa.cli_login()
-    except requests.RequestException as exc:
-        raise NetworkError(detail=str(exc))
-    auth.save_session(wa, name)
-    auth.log_audit("auth.login", name, "ok")
-    console.print(f"[green]Logged in as {name}[/green] (SteamID {wa.steam_id})")
+def login(
+    username: str = typer.Option(None, "--username", "-u", help="Steam account name"),
+    code: str = typer.Option(
+        None, "--code", help="Steam Guard code (omit to approve in the Steam app instead)"
+    ),
+):
+    """Log in through Steam's current web flow (app approval or Steam Guard code)."""
+
+    def progress(**event: object) -> None:
+        step = str(event.get("step") or "")
+        if step == "guard":
+            console.print(f"[yellow]{event.get('note')}[/yellow]")
+        elif step == "guard_code":
+            console.print("Steam Guard code submitted; waiting for Steam…")
+        elif step == "settoken" and event.get("result") == 1:
+            console.print(f"  [dim]minted {str(event.get('url')).split('/')[2]}[/dim]")
+
+    result = modern_login.login(username=username, code=code, save=True, on_event=progress)
+    auth.log_audit("auth.login", result["username"], "ok")
+    console.print(
+        f"[green]Logged in as {result['username']}[/green] "
+        f"(SteamID {result['steam_id']}, store session verified)"
+    )
 
 
 @app.command()
@@ -77,14 +87,31 @@ def set_key(
 
 
 @app.command()
-def refresh():
-    """Check whether the saved session is still valid."""
+def refresh(
+    remint: bool = typer.Option(
+        False,
+        "--remint",
+        help="Re-authenticate from the stored refresh token (no password, no 2FA)",
+    ),
+):
+    """Check the saved session; `--remint` rebuilds it from the refresh token."""
+    if remint:
+        result = modern_login.remint_session(save=True)
+        auth.log_audit("auth.remint", result["username"] or "-", "ok")
+        console.print(
+            f"[green]Session re-minted[/green] "
+            f"(SteamID {result['steam_id']}, store session verified)"
+        )
+        return
     if not auth.is_logged_in():
         raise NotAuthenticatedError()
     if auth.is_session_valid():
         console.print("Session is still valid.")
     else:
-        console.print("[yellow]Session has expired; please re-login.[/yellow]")
+        console.print(
+            "[yellow]Session has expired.[/yellow] Rebuild it with `steam refresh --remint` "
+            "(no password needed) or sign in again with `steam login`."
+        )
         raise NotAuthenticatedError()
 
 

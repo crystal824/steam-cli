@@ -66,3 +66,8 @@ class ForbiddenError(SteamError):
 class ReviewRejectedError(SteamError):
     code = "review_rejected"
     hint = "Steam refused the review"
+
+
+class LoginFailedError(SteamError):
+    code = "login_failed"
+    hint = "the Steam login flow did not produce a usable session"
