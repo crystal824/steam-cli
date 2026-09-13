@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.4] - 2026-09-13
+
+### Bug Fixes
+
+- **review:** Publish through the real endpoint, not a silent no-op
+  The command posted to steamcommunity.com/profiles/<id>/recommended/, which is
+  only a page: it answers HTTP 200 + HTML and saves nothing. Because nothing but
+  the status code was checked, it printed "Review posted." while publishing
+  nothing at all.
+  
+  Reviews now go to store.steampowered.com/friends/recommendgame -- the endpoint
+  the store front-end calls -- with the parameters it sends, and the JSON reply is
+  parsed: Steam's strError becomes the structured review_rejected error, a non-JSON
+  body raises network_error instead of passing for success, and a published review
+  is read back from the profile page to confirm it landed.
+  
+  --mine reads that profile page too: the public review feed only returns its
+  newest page and filters by language, so it could never match an account whose
+  reviews are Chinese.
+
+
+### Documentation
+
+- **releases:** V0.2.4 notes and version bump
+
 ## [0.2.3] - 2026-09-12
 
 ### Documentation
