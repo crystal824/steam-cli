@@ -52,12 +52,6 @@ release pages are left as they are.
 CI then builds both artifacts, publishes the GitHub Release using your notes, and
 commits the regenerated `CHANGELOG.md` back to `main`.
 
-4. **Keep exactly one public release.** A new tag becomes *latest* automatically but does
-   not hide its predecessor, so draft the previous one right after the new one publishes
-   (`gh release edit <previous-tag> --draft` — see *Hiding a published release*). This
-   repository is maintained that way on purpose: only the newest version stays
-   downloadable.
-
 ## Hiding a published release
 
 Old releases can be hidden without deleting them: a **draft** keeps its tag (so the
