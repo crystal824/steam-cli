@@ -123,6 +123,10 @@ reviews come in):
 }
 ```
 
+The human-readable output labels its sections in Chinese (好友/差评 samples, 总评, 近期) and
+prints the score band as `中文档位 (English band)` — this CLI is driven from a
+Chinese-language account. `--json` is language-neutral.
+
 The CLI does not summarise anything itself: it hands over the band, the numbers and the
 samples, and the agent writes the "what's good / what's bad". Two habits matter when you
 do — quote the band, the share and how many samples you actually read; and for a
