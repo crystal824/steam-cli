@@ -12,6 +12,7 @@ Summary:
 | Web login | community `/login/dologin/` (ValvePython `WebAuth`) | `IAuthenticationService` + `login.steampowered.com/jwt/finalizelogin` | login "succeeds", session authenticates nothing |
 | Store login helpers | store `/login/getrsakey/`, `/login/dologin/` | retired (HTML/404) | non-JSON response / `Method Not Allowed` |
 | CDK activation | `POST /account/registerkey` | `POST /account/ajaxregisterkey/` (JSON) | `endpoint_unavailable`, "unrecognized response" |
+| Reviews | `POST /profiles/<steamid>/recommended/` | `POST /friends/recommendgame` (JSON) | HTTP 200 + HTML counted as success — nothing was ever published |
 | Wishlist read | `/wishlist/profiles/<id>/wishlistdata/` | `IWishlistService/GetWishlist/v1/` | HTTP 302 → JSON decode error |
 | Store app names | batched `api/appdetails?appids=1,2,3` | **one appid per request** | HTTP 400 on any list |
 | Full app list | `ISteamApps/GetAppList` | 404/403 (retired/restricted) | 404 |
@@ -102,7 +103,51 @@ Code `9` means the key **was** consumed earlier (by this account) — report it 
 success-with-caveat. Re-submitting a key is therefore a safe idempotency check:
 `already_activated` / code `9` proves an earlier attempt landed.
 
-## 3. Wishlist — endpoint replaced
+## 3. Reviews — posting went nowhere
+
+`steam review post` submitted to
+`https://steamcommunity.com/profiles/<steamid>/recommended/`, which is only a
+**page**: a POST there answers HTTP 200 with HTML and saves nothing. Because the
+code tested nothing but `status_code == 200`, it printed `Review posted.` while
+publishing nothing at all — a silent no-op that survived every earlier test
+because it had only ever been run with `--dry-run`.
+
+The real endpoint is the one the store front-end uses
+(`public/javascript/main.js` → `RecommendGame()`):
+
+```
+POST https://store.steampowered.com/friends/recommendgame
+     appid=<appid>&steamworksappid=<appid>&comment=<text>&rated_up=<true|false>
+     &is_public=<true|false>&language=<steam language code>
+     &received_compensation=0&disable_comments=0&saved_hardware_id=
+     &sessionid=<sessionid>
+     Referer: https://store.steampowered.com/app/<appid>/
+     Origin:  https://store.steampowered.com
+     X-Requested-With: XMLHttpRequest
+```
+
+- `{"success": true}` → published.
+- `{"success": false, "strError": "..."}` → structured failure. Steam enforces its
+  own rules here; the first one you meet is *"You need to have used this product
+  for at least 5 minutes before posting a review for it"*.
+- `{"success": false}` **without** `strError` → the session was not accepted
+  (`session_expired`).
+- A **non-JSON body** now raises `network_error` ("the endpoint may have moved")
+  instead of counting as success, which is how the old code lied.
+
+Reading reviews back is the other half of the fix. The public
+`appreviews/<appid>` feed cannot answer "my review": it returns only the newest
+page (top titles have >1M reviews) and filters by language, so the old `--mine`
+filter could never match an account that writes Chinese. `steam review mine` and
+`review list --mine` now parse the account's own
+`/profiles/<steamid>/recommended/` page instead, which is authoritative.
+
+Verify a **just**-published review against that profile page or against the
+review's own permalink (`/profiles/<steamid>/recommended/<appid>/`) fetched
+**without cookies** — the public feed lags by minutes, and the profile page can
+briefly serve a cached copy whose review block has an empty body.
+
+## 4. Wishlist — endpoint replaced
 
 `https://store.steampowered.com/wishlist/profiles/<steamid>/wishlistdata/` now
 returns **302 for every request** (with a valid session, with and without an
@@ -120,7 +165,7 @@ therefore resolved with **one request per appid**, run through a small thread po
 and cached in `~/.config/steam-cli/appnames.json` (~14 s cold for 98 items, ~3 s
 warm).
 
-## 4. Session cookies — `CookieConflictError`
+## 5. Session cookies — `CookieConflictError`
 
 `requests` rejects `session.cookies.get("sessionid")` when the same cookie name
 exists for several domains — which is the normal state of a Steam session, because
@@ -129,7 +174,7 @@ through `steam_cli.auth.cookie_value(session, name)`, which iterates the jar
 instead. Call sites that used to crash: `activate` (×2), `friends`, `review`,
 `wishlist`.
 
-## 5. Steam's published API metadata is unreliable
+## 6. Steam's published API metadata is unreliable
 
 ValvePython's `WebAPI` validates calls against `GetSupportedAPIList` and refuses
 to send when a parameter marked "required" is missing. That metadata now disagrees
@@ -139,7 +184,7 @@ and the complete library. The local patch
 (`patches/steam-1.4.4-webapi-required-params.patch`) skips absent parameters and
 lets Steam do the real validation.
 
-## 6. Verifying that something landed
+## 7. Verifying that something landed
 
 `GetOwnedGames` has **no acquisition timestamp**, and playtime can predate a key
 (the user may have played a Playtest build), so neither the library list nor a CLI
@@ -151,7 +196,7 @@ licenses page, where each row carries the acquisition **date and method**
 .venv/bin/python tools/check_licenses.py --grep "<PRODUCT NAME>"
 ```
 
-## 7. Still broken upstream
+## 8. Still broken upstream
 
 - `friends invite-link` → **403** from
   `steamcommunity.com/actions/QuickInviteLink`; the server-side endpoint changed.

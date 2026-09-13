@@ -27,6 +27,10 @@ fails with "No such command 'auth'"). Run `steam status` on its own.
 - Write operations — `activate`, `wishlist add`/`remove`, `review post`,
   `friends invite-link --refresh` — require explicit user intent; batch activation
   previews the whole batch and confirms once, never per key.
+- `steam review post` publishes **immediately** — there is no confirmation prompt, so
+  draft the wording and get the user's approval first. Steam requires **at least 5
+  minutes of playtime** on the product before it accepts a review, and the review's
+  language is set with `-L` (default `schinese`).
 - A message that is *only* a product key (`XXXXX-XXXXX-XXXXX`, or 5 groups of 5)
   means "activate this": validate with `--dry-run` first, then activate, then report
   the product name or the structured reason. Never echo the full key back.
@@ -84,8 +88,9 @@ Library & wishlist
 
 Activation & reviews
 - `steam activate <cdk> [--batch <file>] [--dry-run] [--yes]`
-- `steam review post <appid> --text "..." [--recommend|--not-recommend] [--dry-run]`
-- `steam review list <appid> [--mine]`
+- `steam review post <appid> --text "..." [--recommend|--not-recommend] [--language/-L <code>] [--private] [--verify/--no-verify] [--dry-run]`
+- `steam review list <appid> [--mine] [--language/-L <code>|all] [--limit/-n N]`
+- `steam review mine` — every review this account has posted
 
 Friends, stats & more
 - `steam friends list [--online] | playing <appid> | recently-played | invite-link [--refresh]`

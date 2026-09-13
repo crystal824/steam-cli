@@ -11,5 +11,6 @@ dist/
 
 # local patch scratch copies (kept out of history)
 *.orig
+*.orig-*
 *.bak
 *.bak-*

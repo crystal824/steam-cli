@@ -61,3 +61,8 @@ class EndpointUnavailableError(SteamError):
 class ForbiddenError(SteamError):
     code = "forbidden"
     hint = "this operation is forbidden by safety policy"
+
+
+class ReviewRejectedError(SteamError):
+    code = "review_rejected"
+    hint = "Steam refused the review"
