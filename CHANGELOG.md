@@ -2,6 +2,61 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.6] - 2026-09-13
+
+### Bug Fixes
+
+- **review:** Read the profile page whatever language the session speaks
+  A re-minted session carries `Steam_Language` from the account, so
+  `steamcommunity.com/profiles/<id>/recommended/` renders as 推荐 / 发布于 / 小时 / 可见性 for
+  a Chinese account. The parser matched English labels, so `steam review mine` silently
+  showed empty date, playtime and visibility columns for every review.
+  
+  The page is now requested with `l=english`, and the 推荐/不推荐 verdict is taken from
+  the `icon_thumbsUp/Down` icon files, which do not move between languages (the Chinese
+  word for "not recommended" contains the one for "recommended", so text matching there
+  is a trap of its own). `tools/check_licenses.py` pins `l=english` for the same reason —
+  its acquisition column reads 零售 / Steam 商店 otherwise.
+
+
+### Documentation
+
+- The login flow now lives in the CLI, plus two traps
+  `steam login` / `steam refresh --remint` replace the "use the tools script" advice in
+  the READMEs, the Skill, `references/auth.md` and `tools/README.md`. The endpoint
+  changes document and `docs/development.md` gain the two lessons this work paid for:
+  a session probe must follow redirects, and any HTML-parsed page must pin `l=english`
+  (Steam sets `Steam_Language` from the account, which silently blanked parsed fields).
+
+- **releases:** V0.2.6 notes and version bump
+
+
+### Features
+
+- **auth:** Run Steam's current login flow inside the CLI
+  `steam login` used ValvePython's `steam.webauth.WebAuth`, which posts to the community
+  `/login/dologin/` endpoint Valve retired: Steam still answers it (success +
+  login_complete after a correct password and 2FA code) but mints no usable session, so
+  the command could report success and authenticate nothing. The working flow only
+  existed in `tools/steam_modern_login.py`.
+  
+  It now lives in `steam_cli.modern_login` and the command drives it: RSA key exchange,
+  `BeginAuthSessionViaCredentials`, app approval or `UpdateAuthSessionWithSteamGuardCode`,
+  `PollAuthSessionStatus` for the refresh token, `jwt/finalizelogin`, then the per-domain
+  settoken calls — with `steamID` in every settoken body, without which Steam answers
+  `{"result": 8}` and mints no cookie.
+  
+  Because a login yields a long-lived refresh token, an expired session now rebuilds with
+  `steam refresh --remint` (no password, no 2FA) — the operation the Skill previously
+  told people to run through a script. Failures are structured (`login_failed`) and
+  nothing half-broken is persisted: the session is only written after the store accepts
+  it. The two `tools/` scripts become thin JSON-emitting wrappers over the same code.
+  
+  While verifying that: the "is this session valid?" probe used `allow_redirects=False`
+  and required a bare 200, but the store 302s a first request to `/account/` to itself
+  while it bootstraps cookies — so healthy sessions were reported as expired. It follows
+  redirects now (`auth.probe_authed`) and rejects only a landing on `/login/`.
+
 ## [0.2.5] - 2026-09-13
 
 ### Build & CI
