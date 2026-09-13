@@ -23,12 +23,11 @@ Write operations and personal reads need a login session:
 steam login            # or: steam login --username <name>
 ```
 
-**Caveat (2026):** the `steam login` command still drives ValvePython's
-`steam.webauth.WebAuth`, which posts to Steam's retired community `/login/dologin/`.
-That call can report success while producing a session that authenticates nothing —
-prefer [`tools/steam_modern_login.py`](../../../tools/README.md), which implements the
-flow Steam actually uses today (`IAuthenticationService` + `finalizelogin`). The
-prompts below are the same either way:
+**Since 2026-09-13** `steam login` drives Steam's current flow itself
+(`IAuthenticationService` → `finalizelogin` → per-domain settoken); ValvePython's
+retired `/login/dologin/` path is no longer involved. If a session merely expired,
+`steam refresh --remint` rebuilds it from the stored refresh token with no password and
+no 2FA — a full login is only needed once that token expires. The prompts below apply:
 
 - **Steam Guard mobile code** — user enters the code from the Steam app.
 - **Email code** — user enters the code sent to their email.

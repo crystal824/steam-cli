@@ -21,7 +21,8 @@ fails with "No such command 'auth'"). Run `steam status` on its own.
 ## Operating rules
 
 - Always start with `steam status`; a session that has gone invalid is re-minted
-  (no password, no 2FA) with `tools/steam_remint_session.py --save`.
+  (no password, no 2FA) with `steam refresh --remint` — the tools script of the same
+  name is a JSON-emitting wrapper around that code path.
 - Public store queries (`search`, `app`, `price`, `radar`) need no credentials at
   all. Library / wishlist / friends / stats / news / achievements need a Web API key.
 - Write operations — `activate`, `wishlist add`/`remove`, `review post`,
@@ -108,10 +109,11 @@ Friends, stats & more
 
 ## Known limitations (current Steam backend)
 
-- **`steam login` may report success while producing a session that authenticates
-  nothing** — ValvePython's `WebAuth` targets the retired community
-  `/login/dologin/`. Use `tools/steam_modern_login.py` instead, and re-authenticate
-  later with `tools/steam_remint_session.py` (refresh token; no password, no 2FA).
+- **Login runs Steam's current flow** (`IAuthenticationService` → `finalizelogin` →
+  settoken; the retired `/login/dologin/` path is gone). Approve in the mobile app or
+  pass the Guard code; an expired session is rebuilt with `steam refresh --remint`
+  (refresh token, no password, no 2FA). `steam status` is the probe to trust — it
+  follows redirects, so it no longer cries "expired" during a store bootstrap 302.
 - `steam friends invite-link` returns **403** (`steamcommunity.com/actions/QuickInviteLink`
   changed server-side). Do not retry-loop it.
 - Store requests follow the account's store region and language (auto-detected,

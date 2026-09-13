@@ -74,6 +74,27 @@ never raises, and can recover the SteamID from the `steamLoginSecure` cookie —
 whose value is URL-encoded `<steamid>%7C%7C<token>`. See
 `patches/steam-1.4.4-webauth-transfer-info.patch`.
 
+### 2026-09-13 — the flow now lives in the CLI
+
+`steam login` runs all of the above (app approval or Guard code → poll → finalize →
+settoken), and `steam refresh --remint` replays the last three steps from the stored
+refresh token, so an expired session is rebuilt without a password. The two scripts in
+`tools/` are now thin JSON-emitting wrappers around the same code. Two traps surfaced
+while wiring it:
+
+- **A "is this session valid?" probe must follow redirects.** The store answers a first
+  request to `/account/` with a 302 to itself while it bootstraps cookies, so the old
+  "no redirects, require 200" check reported healthy sessions as expired
+  (`steam status` → `Session valid: no`) and sent people off to re-login for nothing.
+  It is `auth.probe_authed()` now: follow, then require 200 and a landing URL that is
+  not `/login/`.
+- **Any page parsed as HTML needs `?l=english`.** A re-minted session carries
+  `Steam_Language` from the account, so `steamcommunity.com/profiles/<id>/recommended/`
+  renders as 推荐 / 发布于 / 小时 / 可见性 and an English-only parser silently blanks the
+  date, playtime and visibility columns (`steam review mine` did exactly that). The
+  verdict is read from the `icon_thumbsUp/Down` files, which do not move between
+  languages. `tools/check_licenses.py` pins `l=english` for the same reason.
+
 ## 2. CDK activation — wrong endpoint, not a bad key
 
 `POST https://store.steampowered.com/account/registerkey` is only the HTML form

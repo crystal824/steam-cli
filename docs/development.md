@@ -95,9 +95,18 @@ CI 跑的就是这四道（见 `.github/workflows/ci.yml`），另加产物构�
 - 判断"接口死了还是参数错了"：先看响应的 `content-type`（返回 HTML 说明打到的是页面，不是接口）和 JSON 里的 `success` / `strError`。
 - 结论要落进文档（带上实测命令），并在 `skill/steam/SKILL.md` 里留下给 Agent 的规则——否则下次还会踩。
 
+### 两个已经踩过的通用陷阱（2026-09-13）
+
+1. **做"是否登录"探针必须跟随跳转。** 商店对 `/account/` 的首次请求经常回 302 到自身（引导 cookie），
+   只看 `allow_redirects=False` 的 200 会把**健康会话判成过期**——`steam status` 曾因此长期误报，
+   还白白触发过一次"重新登录"。现统一走 `auth.probe_authed()`：跟随跳转 + 落地页不得是 `/login/`。
+2. **凡是用 HTML 解析的页面都要显式 `?l=english`。** 重铸会话后 Steam 会按账号写入
+   `Steam_Language`，个人页随之变成中文（推荐/发布于/小时/可见性），按英文正则写的解析器会静默
+   解析成空字段（`steam review mine` 就中过一次）。评价的"推荐/不推荐"另用
+   `icon_thumbsUp/Down` 图标判定，与语言无关。
+
 ## 9. 已知缺口
 
-- `steam login` 仍走 ValvePython 的 `/login/dologin/` 退役路径（可能"报成功但没认证"）；可用路径是 `tools/steam_modern_login.py`，会话失效用 `tools/steam_remint_session.py` 免密码重铸。
 - `steam friends invite-link` 服务端 403，本地无法修复。
 - `steam achievements` 打印成就的 API 名而非显示名（未 join `GetSchemaForGame`）。
 - `review summary` 的人类可读输出标签目前固定中文（档位为「中文档位 (English band)」），`--json` 与语言无关。

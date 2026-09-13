@@ -1,10 +1,13 @@
 # tools/
 
-Deployment and recovery helpers that sit *outside* the CLI's command surface.
-They are plain scripts; run them with the project's virtualenv, e.g.
+Deployment and recovery helpers. Since 0.2.6 the login flow lives in the CLI itself
+(`steam login`, `steam refresh --remint`); these scripts are thin wrappers around the
+same code that print **one JSON object per step**, which is easier to drive from
+automation. Run them with the project's virtualenv:
 
 ```bash
 .venv/bin/python tools/steam_modern_login.py --username <account> --save
+.venv/bin/python tools/steam_remint_session.py --save      # no password, no 2FA
 ```
 
 | Script | Purpose |

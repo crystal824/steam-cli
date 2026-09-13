@@ -153,10 +153,11 @@ steam price 1144200 --cc us                      # one-off: compare another regi
 ## Credentials
 
 - `steam set-key <key>` stores a Web API key for read-only account queries.
-- `steam login` runs the current Steam login flow (RSA key exchange,
-  `IAuthenticationService`, app approval or a Steam Guard code) and keeps both a
-  session and a long-lived **refresh token** — so re-authenticating later needs no
-  password and no 2FA.
+- `steam login` runs Steam's current web login (RSA key exchange,
+  `IAuthenticationService`, app approval or a Steam Guard code) and keeps both a session
+  and a long-lived **refresh token** — so a session that simply expired is rebuilt with
+  `steam refresh --remint`: no password, no 2FA. `steam logout` clears the session but
+  keeps that token on purpose; `steam revoke-all` wipes everything.
 - Credentials live in the OS keyring; where there is none (a headless NAS, say), they
   fall back to `~/.config/steam-cli/*.secret` with mode `0600`. The account password is
   never stored.
@@ -205,10 +206,12 @@ knowing up front:
   `friends/recommendgame` endpoint with the parameters that front-end sends, and parses
   the JSON reply: a refusal becomes the structured `review_rejected` error instead of a
   fake success, and a non-JSON body raises `network_error` rather than passing.
-- **Login had to be rebuilt** — `steam login` alone would "succeed" and then
-  authenticate nothing. `tools/steam_modern_login.py` implements the flow in use, and
-  `tools/steam_remint_session.py` re-mints a session from the stored refresh token with
-  no password and no 2FA.
+- **Login was rebuilt, and now lives in the CLI.** `steam login` drives Steam's
+  current flow (`IAuthenticationService`: approve in the mobile app or type a Steam
+  Guard code, then `finalizelogin` + the per-domain settoken calls). A session that has
+  merely expired is rebuilt from the stored refresh token with `steam refresh --remint`
+  — no password, no 2FA. `tools/steam_modern_login.py` / `tools/steam_remint_session.py`
+  remain as JSON-emitting wrappers for automation.
 - **Verify activations** with `tools/check_licenses.py`: `GetOwnedGames` carries no
   acquisition timestamp, so the account licenses page (date + method) is the only proof
   that a key landed.

@@ -138,8 +138,10 @@ steam price 1144200 --cc us                      # 临时查其他区域价格
 ## 凭据
 
 - `steam set-key <Key>`：存一个 Web API Key，用于只读的账号数据查询。
-- `steam login`：走 Steam 当前登录流程（RSA 密钥交换、`IAuthenticationService`、手机 App 批准或
-  Steam Guard 验证码），同时保存会话与**长期 refresh token**——之后重新认证不需要密码，也不需要 2FA。
+- `steam login`：走 Steam 当前网页登录流程（RSA 密钥交换、`IAuthenticationService`、手机 App 批准
+  或 Steam Guard 验证码），同时保存会话与**长期 refresh token**——会话只是过期的话，用
+  `steam refresh --remint` 重建即可，不需要密码也不需要 2FA。`steam logout` 只清会话、**有意保留**
+  refresh token；`steam revoke-all` 才会连它一起抹掉。
 - 凭据存进系统 keyring；没有 keyring 的环境（比如无头 NAS）回落到
   `~/.config/steam-cli/*.secret`，权限 `0600`。**账号密码从不保存**。
 - `steam logout` 清除会话；`steam revoke-all` 抹掉全部本地凭据。
@@ -175,9 +177,11 @@ Valve 陆续下线和改写了本 CLI 早期依赖的一批接口。那些失败
 - **`steam review post` 曾经什么都发不出去却报成功**——它把请求发到了一个社区*页面*上，而且只检查
   HTTP 200。现在改用商店前端真正调用的 `friends/recommendgame`，并解析 JSON 响应：被拒绝会抛成
   结构化的 `review_rejected`，返回非 JSON 则抛 `network_error`，不再有假成功。
-- **登录流程重写过**——单靠 `steam login` 会「成功」但实际上没认证任何东西。
-  `tools/steam_modern_login.py` 实现当前流程，`tools/steam_remint_session.py` 用已存的 refresh token
-  免密码免 2FA 重新铸造会话。
+- **登录流程重写过，而且已经内置进 CLI**。`steam login` 走的正是 Steam 当前的流程
+  （`IAuthenticationService`：手机 App 批准或输入 Steam Guard 验证码，然后 `finalizelogin`
+  与各域 settoken）。仅仅是会话过期，用 `steam refresh --remint` 从已存的 refresh token 重建即可，
+  **不需要密码、不需要 2FA**。`tools/steam_modern_login.py` / `tools/steam_remint_session.py`
+  保留为输出 JSON 的自动化封装。
 - **验证激活**用 `tools/check_licenses.py`：`GetOwnedGames` 不带获取时间戳，账号许可证页面上的
   日期与方式（Retail = 卡密）才是唯一凭据。
 - `steam friends invite-link` 返回 **403**——Valve 改了该接口，本地无法修复。
