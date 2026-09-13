@@ -2,6 +2,39 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.5] - 2026-09-13
+
+### Documentation
+
+- Review summaries and account-aware store region
+
+- **releases:** V0.2.5 notes and version bump
+
+
+### Features
+
+- **review:** Summarize a game's reception (band, recent trend, pros/cons)
+  `steam review summary <appid|title>` prints the score band (好评如潮 … 褒贬不一),
+  the positive share, a client-side-sampled recent window (Steam retired `day_range`:
+  it returns the all-time numbers verbatim) and the most-helpful 好评/差评 samples.
+  
+  None of that endpoint's parameters can be trusted on obscure titles, so the
+  sampler merges the "most helpful" and newest listings, splits on each review's own
+  `voted_up` (review_type is not honoured consistently), seeds the first page with an
+  explicit `cursor=*` (otherwise Steam answers with a single featured review) and
+  stops when a page adds nothing new. CJK titles resolve through the
+  Simplified-Chinese store search, the only index that knows them.
+
+- **store:** Resolve the region and language from the account
+  Every store request sent `l=english&cc=us`, so a Chinese account was quoted USD and
+  got English text. Omitting `cc` is not a fix either: with a session, appdetails
+  answers CNY for appid 1144200 but USD for appid 220, and `filters=price_overview`
+  flips it back. The account page carries the authoritative `country_code` instead.
+  
+  `region.py` reads it (the page `steam status` already fetches), caches it for a day
+  and derives the language from the country. Overridable per call (`--cc`/`--lang`),
+  per shell (`STEAM_CLI_CC`/`STEAM_CLI_LANG`) or permanently (`steam config region`).
+
 ## [0.2.4] - 2026-09-13
 
 ### Bug Fixes
