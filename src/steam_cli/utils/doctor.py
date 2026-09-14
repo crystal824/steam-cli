@@ -25,7 +25,7 @@ PROBES = {
     "community search (official)": ("GET", "https://steamcommunity.com/actions/SearchApps/x", None),
     "wishlist endpoint": (
         "GET",
-        "https://store.steampowered.com/wishlist/profiles/0/wishlistdata/",
+        "https://api.steampowered.com/IWishlistService/GetWishlist/v1/",
         None,
     ),
     "account page": ("GET", "https://store.steampowered.com/account/", None),

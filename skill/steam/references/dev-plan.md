@@ -134,7 +134,7 @@ steam news <appid> [--count 5]
 
 ### 4.3 库与愿望单 `[①读 / ②写]`
 ```bash
-steam library list [--recent] [--never-played] [--sort playtime|name|added]
+steam library list [--recent] [--never-played] [--sort playtime|name|last-played]
 steam library has <appid|name>
 steam wishlist list
 steam wishlist add <appid|name>       # ② 需要登录会话 access_token

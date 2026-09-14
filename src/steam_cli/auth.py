@@ -260,6 +260,12 @@ def clear_session() -> None:
     _invalidate_status()
 
 
+def clear_refresh_token() -> None:
+    """Drop the long-lived refresh token (part of ``steam revoke-all``)."""
+    _keyring_delete(KEY_REFRESH_TOKEN)
+    _invalidate_status()
+
+
 def get_username() -> str | None:
     return _keyring_get(KEY_USERNAME)
 

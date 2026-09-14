@@ -23,7 +23,7 @@ import os
 import re
 import time
 
-from . import auth
+from . import USER_AGENT, auth
 from .errors import NotAuthenticatedError
 
 CACHE_FILE = auth.CONFIG_DIR / "region.json"
@@ -96,7 +96,7 @@ def fetch_account_country() -> str | None:
         resp = session.get(
             ACCOUNT_URL,
             timeout=20,
-            headers={"User-Agent": "Mozilla/5.0 (steam-cli)"},
+            headers={"User-Agent": USER_AGENT},
         )
     except Exception:  # network trouble: fall back rather than fail every command
         return None
@@ -168,9 +168,6 @@ def language() -> str:
     explicit = _explicit_lang()
     if explicit:
         return explicit
-    from_cache = _clean(_read_cache().get("lang"))
-    if from_cache:
-        return from_cache
     return _CC_LANG.get(country(), DEFAULT_LANG)
 
 

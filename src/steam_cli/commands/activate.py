@@ -132,7 +132,7 @@ def _describe_result(result: str) -> str:
     return f"[red]{result}[/red]"
 
 
-def _raise_for_result(result: str, key: str) -> None:
+def _raise_for_result(result: str) -> None:
     if result == "ok":
         return
     if result == "already_activated":
@@ -204,7 +204,7 @@ def register(app: typer.Typer) -> None:
             label = f" — [bold]{name}[/bold]" if name else ""
             console.print(f"[green]Activated {_mask_key(key)}[/green]{label}")
         else:
-            _raise_for_result(result, key)
+            _raise_for_result(result)
 
 
 def _activate_batch(path: str, dry_run: bool, yes: bool) -> None:

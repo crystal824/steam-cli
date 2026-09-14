@@ -22,8 +22,8 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from .. import auth, region
-from ..client import resolve_appid
+from .. import USER_AGENT, auth, region
+from ..client import join_terms, resolve_appid
 from ..errors import ForbiddenError, NetworkError
 from ..utils.price import current_price
 
@@ -62,6 +62,16 @@ def _wishlist_items(session: requests.Session, steamid: str) -> list[dict]:
     return [i for i in items if isinstance(i, dict) and i.get("appid")]
 
 
+def wishlist_appids() -> list[int]:
+    """AppIDs on the signed-in account's wishlist, via IWishlistService.
+
+    The old store `wishlistdata` endpoint is retired (HTTP 302 for every request).
+    """
+    session = auth.require_session()
+    steamid = auth.require_steam_id()
+    return [int(i["appid"]) for i in _wishlist_items(session, steamid)]
+
+
 def _load_name_cache() -> dict[str, str]:
     try:
         data = json.loads(APPNAME_CACHE.read_text(encoding="utf-8"))
@@ -85,6 +95,7 @@ def _fetch_name(appid: int) -> tuple[int, str]:
         resp = requests.get(
             STORE_DETAILS_URL,
             params=region.store_params({"appids": str(appid)}),
+            headers={"User-Agent": USER_AGENT},
             timeout=20,
         )
         payload = resp.json()
@@ -165,11 +176,11 @@ def register(app: typer.Typer) -> None:
 
     @group.command()
     def add(
-        appid_or_name: str,
+        appid_or_name: list[str],
         dry_run: bool = typer.Option(False, "--dry-run", help="Preview only"),
     ):
         """Add a game to your wishlist."""
-        appid = resolve_appid(appid_or_name)
+        appid = resolve_appid(join_terms(appid_or_name))
         if dry_run:
             console.print(f"[yellow]dry-run[/yellow] would add appid {appid} to the wishlist")
             return
@@ -185,11 +196,11 @@ def register(app: typer.Typer) -> None:
 
     @group.command()
     def remove(
-        appid_or_name: str,
+        appid_or_name: list[str],
         dry_run: bool = typer.Option(False, "--dry-run", help="Preview only"),
     ):
         """Remove a game from your wishlist."""
-        appid = resolve_appid(appid_or_name)
+        appid = resolve_appid(join_terms(appid_or_name))
         if dry_run:
             console.print(f"[yellow]dry-run[/yellow] would remove appid {appid} from the wishlist")
             return

@@ -8,9 +8,10 @@ from functools import lru_cache
 from urllib.parse import quote
 
 import httpx
+import requests
 from steam.webapi import WebAPI
 
-from . import auth, region
+from . import USER_AGENT, auth, region
 from .errors import ApiKeyMissingError, NetworkError
 
 _APPID_RE = re.compile(r"^\d+$")
@@ -32,6 +33,19 @@ class SteamClient:
         if self._api is None:
             raise ApiKeyMissingError()
         return self._api
+
+
+def owned_games(client: SteamClient) -> list[dict]:
+    """Games in the signed-in account's library (requires key + session)."""
+    try:
+        response = client.api.IPlayerService.GetOwnedGames(
+            steamid=auth.require_steam_id(),
+            include_appinfo=1,
+            include_played_free_games=1,
+        )
+    except (requests.RequestException, ValueError) as exc:
+        raise NetworkError(detail=str(exc))
+    return response.get("response", {}).get("games", [])
 
 
 def join_terms(parts: str | list[str] | tuple[str, ...] | None) -> str:
@@ -77,7 +91,7 @@ def _search_apps(term: str) -> list[dict]:
         with httpx.Client(timeout=10) as client:
             resp = client.get(
                 "https://steamcommunity.com/actions/SearchApps/" + quote(term, safe=""),
-                headers={"User-Agent": "Mozilla/5.0 (steam-cli/0.1)"},
+                headers={"User-Agent": USER_AGENT},
             )
             resp.raise_for_status()
             return list(resp.json())
@@ -92,7 +106,7 @@ def _store_search(term: str, lang: str | None = None, cc: str | None = None) -> 
             resp = client.get(
                 "https://store.steampowered.com/api/storesearch/",
                 params=region.store_params({"term": term, "l": lang, "cc": cc}),
-                headers={"User-Agent": "steam-cli/0.1"},
+                headers={"User-Agent": USER_AGENT},
             )
             resp.raise_for_status()
             items = resp.json().get("items", [])
@@ -107,7 +121,7 @@ def resolve_name(appid: int) -> str:
             resp = client.get(
                 "https://store.steampowered.com/api/appdetails",
                 params=region.store_params({"appids": appid}),
-                headers={"User-Agent": "steam-cli/0.1"},
+                headers={"User-Agent": USER_AGENT},
             )
             resp.raise_for_status()
             data = resp.json()

@@ -117,9 +117,11 @@ def refresh(
 
 @app.command("revoke-all")
 def revoke_all():
-    """Emergency wipe of all locally stored credentials."""
+    """Emergency wipe of all locally stored credentials (key, session, refresh token, proxy)."""
     auth.clear_api_key()
     auth.clear_session()
+    auth.clear_refresh_token()
+    auth.clear_proxy()
     auth.log_audit("auth.revoke-all", "-", "ok")
     console.print("All local credentials cleared.")
 

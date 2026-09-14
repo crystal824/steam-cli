@@ -4,23 +4,23 @@ from __future__ import annotations
 
 import time
 from collections import Counter
-from typing import Any
 
 import httpx
-import requests
 import typer
 from rich.console import Console
 from rich.table import Table
 
-from .. import auth, region
-from ..client import SteamClient, resolve_name
+from .. import USER_AGENT, region
+from ..client import SteamClient, owned_games, resolve_name
 from ..errors import NetworkError
+from .wishlist import wishlist_appids
 
 console = Console()
 
 _STORE_SPECIALS = "https://store.steampowered.com/api/featuredcategories/"
 _DETAILS = "https://store.steampowered.com/api/appdetails"
 _REQUEST_GAP = 0.1
+_UA = USER_AGENT
 
 
 def _app_genres(appid: int) -> set[str]:
@@ -29,7 +29,7 @@ def _app_genres(appid: int) -> set[str]:
             resp = client.get(
                 _DETAILS,
                 params=region.store_params({"appids": appid}),
-                headers={"User-Agent": "steam-cli/0.1"},
+                headers={"User-Agent": _UA},
             )
             resp.raise_for_status()
             data = resp.json()
@@ -41,33 +41,10 @@ def _app_genres(appid: int) -> set[str]:
     return {g.get("description", "") for g in entry["data"].get("genres", [])}
 
 
-def _owned_games(api: Any, steam_id: str) -> list[dict]:
-    try:
-        resp = api.IPlayerService.GetOwnedGames(
-            steamid=steam_id, include_appinfo=1, include_played_free_games=1
-        )
-    except (requests.RequestException, ValueError) as exc:
-        raise NetworkError(detail=str(exc))
-    return resp.get("response", {}).get("games", [])
-
-
-def _wishlist_appids(steam_id: str) -> list[int]:
-    try:
-        session = auth.require_session()
-        resp = session.get(
-            f"https://store.steampowered.com/wishlist/profiles/{steam_id}/wishlistdata/?p=0",
-            timeout=15,
-        )
-        resp.raise_for_status()
-        return [int(a) for a in resp.json() if str(a).isdigit()]
-    except (requests.RequestException, ValueError) as exc:
-        raise NetworkError(detail=str(exc))
-
-
 def _candidate_pool() -> list[int]:
     try:
         with httpx.Client(timeout=15) as client:
-            resp = client.get(_STORE_SPECIALS, headers={"User-Agent": "steam-cli/0.1"})
+            resp = client.get(_STORE_SPECIALS, headers={"User-Agent": _UA})
             resp.raise_for_status()
             data = resp.json()
     except (httpx.HTTPError, ValueError):
@@ -87,15 +64,13 @@ def register(app: typer.Typer) -> None:
         limit: int = typer.Option(5, help="number of recommendations"),
     ):
         """Recommend games by genre overlap with your library or wishlist."""
-        steam_id = auth.require_steam_id()
         client = SteamClient()
-        api = client.api
 
-        owned = _owned_games(api, steam_id)
+        owned = owned_games(client)
         owned_set = {g["appid"] for g in owned}
 
         if based_on == "wishlist":
-            seed_appids = [a for a in _wishlist_appids(steam_id) if a not in owned_set]
+            seed_appids = [a for a in wishlist_appids() if a not in owned_set]
         else:
             playtime = {g["appid"]: g.get("playtime_forever", 0) for g in owned}
             seed_appids = sorted(owned_set, key=lambda a: playtime.get(a, 0), reverse=True)[:10]

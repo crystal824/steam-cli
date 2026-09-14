@@ -87,6 +87,7 @@ def test_status_cached_and_invalidated(monkeypatch):
 
 
 def test_log_audit_creates_file_with_owner_only_permissions(monkeypatch, tmp_path):
+    import os
     import stat
 
     audit_log = tmp_path / "audit.log"
@@ -94,10 +95,12 @@ def test_log_audit_creates_file_with_owner_only_permissions(monkeypatch, tmp_pat
     monkeypatch.setattr(auth, "AUDIT_LOG", audit_log)
 
     auth.log_audit("activate", "ABCD-****-WXYZ", "ok")
-
-    mode = stat.S_IMODE(audit_log.stat().st_mode)
-    assert mode == 0o600
     assert "ABCD-****-WXYZ" in audit_log.read_text()
+
+    # Windows ignores the Unix mode bits passed to os.open; access is ACL-based.
+    if os.name != "nt":
+        mode = stat.S_IMODE(audit_log.stat().st_mode)
+        assert mode == 0o600
 
 
 def test_cookie_value_survives_mirrored_domains():

@@ -11,7 +11,7 @@ from rich.console import Console
 from rich.table import Table
 
 from .. import auth
-from ..client import SteamClient, resolve_appid
+from ..client import SteamClient, join_terms, owned_games, resolve_appid
 from ..errors import NetworkError
 
 console = Console()
@@ -26,18 +26,6 @@ def _client() -> SteamClient:
     return SteamClient()
 
 
-def _owned_games(client: SteamClient) -> list[dict[str, Any]]:
-    try:
-        response = client.api.IPlayerService.GetOwnedGames(
-            steamid=auth.require_steam_id(),
-            include_appinfo=1,
-            include_played_free_games=1,
-        )
-    except (requests.RequestException, ValueError) as exc:
-        raise NetworkError(detail=str(exc))
-    return response.get("response", {}).get("games", [])
-
-
 def _recently_played(client: SteamClient) -> list[dict[str, Any]]:
     try:
         response = client.api.IPlayerService.GetRecentlyPlayedGames(steamid=auth.require_steam_id())
@@ -50,7 +38,7 @@ def _recently_played(client: SteamClient) -> list[dict[str, Any]]:
 def summary() -> None:
     """Summarize library statistics."""
     client = _client()
-    games = _owned_games(client)
+    games = owned_games(client)
     recent = _recently_played(client)
 
     total_games = len(games)
@@ -78,11 +66,11 @@ def summary() -> None:
 
 
 @group.command()
-def game(appid: str) -> None:
+def game(appid: list[str]) -> None:
     """Show stats for a single owned game."""
     client = _client()
-    games = _owned_games(client)
-    appid_int = resolve_appid(appid)
+    games = owned_games(client)
+    appid_int = resolve_appid(join_terms(appid))
     owned = next((g for g in games if g.get("appid") == appid_int), None)
     if owned is None:
         console.print(f"[red]not in library[/red] — {appid_int}")

@@ -242,7 +242,7 @@ pip install -e ".[dev]"
 ruff check src tests tools
 ruff format --check src tests tools
 mypy src
-PYTHONPATH=src python3 -m pytest -q
+PYTHONPATH=src python -m pytest -q
 ```
 
 Those four gates are what CI enforces. Read-only features are safe to exercise against

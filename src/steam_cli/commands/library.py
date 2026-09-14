@@ -5,14 +5,11 @@ from __future__ import annotations
 import datetime
 from typing import Any
 
-import requests
 import typer
 from rich.console import Console
 from rich.table import Table
 
-from .. import auth
-from ..client import SteamClient, join_terms, resolve_appid, resolve_name
-from ..errors import NetworkError
+from ..client import SteamClient, join_terms, owned_games, resolve_appid, resolve_name
 
 console = Console()
 group = typer.Typer()
@@ -24,18 +21,6 @@ def register(app: typer.Typer) -> None:
 
 def _client() -> SteamClient:
     return SteamClient()
-
-
-def _owned_games(client: SteamClient) -> list[dict[str, Any]]:
-    try:
-        response = client.api.IPlayerService.GetOwnedGames(
-            steamid=auth.require_steam_id(),
-            include_appinfo=1,
-            include_played_free_games=1,
-        )
-    except (requests.RequestException, ValueError) as exc:
-        raise NetworkError(detail=str(exc))
-    return response.get("response", {}).get("games", [])
 
 
 def _last_played(game: dict[str, Any]) -> str:
@@ -52,11 +37,11 @@ def _last_played(game: dict[str, Any]) -> str:
 def list_games(
     recent: bool = typer.Option(False, "--recent", help="Only games played in the last 2 weeks"),
     never_played: bool = typer.Option(False, "--never-played", help="Only games never played"),
-    sort: str = typer.Option("name", "--sort", help="name|playtime|added"),
+    sort: str = typer.Option("name", "--sort", help="name|playtime|last-played"),
 ) -> None:
     """List owned games."""
     client = _client()
-    games = _owned_games(client)
+    games = owned_games(client)
 
     if recent:
         games = [g for g in games if g.get("playtime_2weeks", 0) > 0]
@@ -65,7 +50,7 @@ def list_games(
         games = [g for g in games if g.get("playtime_forever", 0) == 0]
     elif sort == "playtime":
         games.sort(key=lambda g: g.get("playtime_forever", 0), reverse=True)
-    elif sort == "added":
+    elif sort == "last-played":
         games.sort(key=lambda g: g.get("rtime_last_played", 0) or 0, reverse=True)
     else:
         games.sort(key=lambda g: str(g.get("name", "")).lower())
@@ -89,7 +74,7 @@ def list_games(
 def has(appid_or_name: list[str]) -> None:
     """Check whether a game is in the library."""
     client = _client()
-    games = _owned_games(client)
+    games = owned_games(client)
     appid = resolve_appid(join_terms(appid_or_name))
     owned = next((g for g in games if g.get("appid") == appid), None)
     if owned is not None:

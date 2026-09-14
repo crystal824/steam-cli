@@ -11,7 +11,7 @@ from rich.console import Console
 from rich.table import Table
 
 from .. import auth
-from ..client import SteamClient, resolve_appid
+from ..client import SteamClient, join_terms, resolve_appid
 from ..errors import EndpointUnavailableError, NetworkError
 
 console = Console()
@@ -91,11 +91,11 @@ def register(app: typer.Typer) -> None:
         console.print(table)
 
     @group.command()
-    def playing(appid: str):
+    def playing(appid: list[str]):
         """List friends currently playing a game."""
         client = SteamClient()
         steamid = auth.require_steam_id()
-        target = resolve_appid(appid)
+        target = resolve_appid(join_terms(appid))
         friends = _fetch_friends(client, steamid)
         if not friends:
             console.print("no friends found")
@@ -106,7 +106,7 @@ def register(app: typer.Typer) -> None:
             console.print("no friends currently playing this game")
             return
         for p in matches:
-            console.print(f"{p.get('personaname', '')} - {p.get('gameextrainfo') or appid}")
+            console.print(f"{p.get('personaname', '')} - {p.get('gameextrainfo') or target}")
 
     @group.command("recently-played")
     def recently_played():
