@@ -13,3 +13,5 @@ from ._compat import relax_webapi_param_validation
 # Applied on import so a clean `pip install` needs no patching of site-packages: see
 # _compat for what ValvePython's stale API metadata would otherwise do to every call.
 WEBAPI_METADATA_RELAXED = relax_webapi_param_validation()
+
+USER_AGENT = f"steam-cli/{__version__}"

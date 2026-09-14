@@ -1,12 +1,13 @@
 # steam-cli 开发文档
 
-面向贡献者与维护者。写的是**当前实现**（v0.2.5）的形态，不是最初的设计稿。
+面向贡献者与维护者。写的是**当前实现**（v0.2.7）的形态，不是最初的设计稿。
 
 相关文档：
 [README](../README.md)（用户向）·
 [steam-endpoint-changes-2026](steam-endpoint-changes-2026.md)（Steam 侧发生过什么变化、怎么修的）·
 [skill/steam/SKILL.md](../skill/steam/SKILL.md)（给 Agent 的规则）·
-[CONTRIBUTING](../CONTRIBUTING.md)（提交规范与测试红线）
+[CONTRIBUTING](../CONTRIBUTING.md)（提交规范与测试红线）·
+[dev-log](dev-log.md)（未发版的本地改动与审计记录）
 
 ## 1. 定位与边界
 
@@ -76,7 +77,7 @@ patches/               # 第三方库（steam 1.4.4）补丁
 ruff check src tests tools
 ruff format --check src tests tools
 mypy src
-PYTHONPATH=src python3 -m pytest -q
+PYTHONPATH=src python -m pytest -q
 ```
 
 CI 跑的就是这四道（见 `.github/workflows/ci.yml`），另加产物构建校验。

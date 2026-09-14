@@ -572,7 +572,7 @@ def register(app: typer.Typer) -> None:
 
     @group.command()
     def post(
-        appid: str,
+        appid: list[str],
         text: str = typer.Option(..., "--text", help="Review body"),
         recommend: bool = typer.Option(True, "--recommend/--not-recommend"),
         language: str = typer.Option(
@@ -590,30 +590,31 @@ def register(app: typer.Typer) -> None:
         """Post a review for a game (Steam requires >=5 minutes of playtime)."""
         session = auth.require_session()
         steamid = auth.require_steam_id()
+        resolved = str(resolve_appid(join_terms(appid)))
         language = language or region.language()
         reason = filter_review_text(text)
         if reason:
             raise InvalidFormatError(reason)
         if dry_run:
             console.print(f"[yellow]dry-run[/yellow] would POST {REVIEW_POST_URL}")
-            preview = _post_payload(appid, text, recommend, language, private, "<redacted>")
+            preview = _post_payload(resolved, text, recommend, language, private, "<redacted>")
             for key, value in preview.items():
                 console.print(f"  {key} = {value}")
             return
         try:
             verdict = _post_review(
-                session, appid, text, recommend=recommend, language=language, private=private
+                session, resolved, text, recommend=recommend, language=language, private=private
             )
         except ReviewRejectedError as exc:
-            auth.log_audit("review.post", appid, f"rejected:{exc.message[:80]}")
+            auth.log_audit("review.post", resolved, f"rejected:{exc.message[:80]}")
             raise
         except SessionExpiredError:
-            auth.log_audit("review.post", appid, "rejected:session")
+            auth.log_audit("review.post", resolved, "rejected:session")
             raise
-        auth.log_audit("review.post", appid, f"ok:{verdict}")
-        console.print(f"[green]Review posted.[/green] app {appid} ({verdict})")
+        auth.log_audit("review.post", resolved, f"ok:{verdict}")
+        console.print(f"[green]Review posted.[/green] app {resolved} ({verdict})")
         if verify:
-            hit = next((r for r in my_reviews(session, steamid) if r["appid"] == str(appid)), None)
+            hit = next((r for r in my_reviews(session, steamid) if r["appid"] == resolved), None)
             if hit:
                 console.print(
                     f"[green]Verified[/green] on your profile: {hit['verdict']} · "
@@ -627,7 +628,7 @@ def register(app: typer.Typer) -> None:
 
     @group.command("list")
     def list_reviews(
-        appid: str,
+        appid: list[str],
         mine: bool = typer.Option(False, "--mine", help="Only your own review for this app"),
         language: str = typer.Option(
             None, "--language", "-L", help="Language, or 'all' (default: your store language)"
@@ -635,22 +636,23 @@ def register(app: typer.Typer) -> None:
         limit: int = typer.Option(20, "--limit", "-n", help="How many reviews (1-100)"),
     ):
         """List recent public reviews for a game."""
+        resolved = str(resolve_appid(join_terms(appid)))
         language = language or region.language()
         if mine:
             session = auth.require_session()
             steamid = auth.require_steam_id()
-            hits = [r for r in my_reviews(session, steamid) if r["appid"] == str(appid)]
+            hits = [r for r in my_reviews(session, steamid) if r["appid"] == resolved]
             if not hits:
                 console.print(
-                    f"no review by you for app {appid}; `steam review mine` lists all of them"
+                    f"no review by you for app {resolved}; `steam review mine` lists all of them"
                 )
                 return
-            _print_my_table(hits, title=f"Your review for app {appid}")
+            _print_my_table(hits, title=f"Your review for app {resolved}")
             return
         try:
             with httpx.Client(timeout=15) as client:
                 resp = client.get(
-                    REVIEWS_URL.format(appid=appid),
+                    REVIEWS_URL.format(appid=resolved),
                     params={
                         "json": "1",
                         "language": language,
@@ -668,7 +670,7 @@ def register(app: typer.Typer) -> None:
         if not reviews:
             console.print("no reviews found")
             return
-        table = Table(title=f"Reviews for app {appid} · language={language}")
+        table = Table(title=f"Reviews for app {resolved} · language={language}")
         table.add_column("Author")
         table.add_column("Recommended")
         table.add_column("Posted")

@@ -85,9 +85,9 @@ Store & discovery
 - `steam profile <steamid|vanity>`
 
 Library & wishlist
-- `steam library list [--recent] [--never-played] [--sort name|playtime|added]`
+- `steam library list [--recent] [--never-played] [--sort name|playtime|last-played]`
 - `steam library has <appid|name>`
-- `steam wishlist list | add <id> [--dry-run] | remove <id> | on-sale`
+- `steam wishlist list | add <appid|name> [--dry-run] | remove <appid|name> | on-sale`
 
 Activation & reviews
 - `steam activate <cdk> [--batch <file>] [--dry-run] [--yes]`

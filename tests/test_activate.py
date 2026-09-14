@@ -111,27 +111,27 @@ def test_activate_http_error():
 
 def test_raise_for_result_mapping():
     with pytest.raises(AlreadyActivatedError):
-        _raise_for_result("already_activated", "K")
+        _raise_for_result("already_activated")
     with pytest.raises(AlreadyActivatedError):
-        _raise_for_result("already_owned", "K")
+        _raise_for_result("already_owned")
     with pytest.raises(RegionLockedError):
-        _raise_for_result("region_locked", "K")
+        _raise_for_result("region_locked")
     with pytest.raises(InvalidKeyError):
-        _raise_for_result("invalid", "K")
+        _raise_for_result("invalid")
     with pytest.raises(InvalidKeyError):
-        _raise_for_result("base_game_required", "K")
+        _raise_for_result("base_game_required")
     with pytest.raises(NetworkError):
-        _raise_for_result("rate_limited", "K")
+        _raise_for_result("rate_limited")
     with pytest.raises(NetworkError):
-        _raise_for_result("retry_later", "K")
+        _raise_for_result("retry_later")
     with pytest.raises(NetworkError):
-        _raise_for_result("http:500", "K")
+        _raise_for_result("http:500")
     with pytest.raises(EndpointUnavailableError):
-        _raise_for_result("unknown", "K")
+        _raise_for_result("unknown")
 
 
 def test_raise_for_result_ok_noop():
-    _raise_for_result("ok", "K")
+    _raise_for_result("ok")
 
 
 def test_activate_batch_logs_masked_key_not_raw_key(monkeypatch, tmp_path):

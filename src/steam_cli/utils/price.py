@@ -8,7 +8,7 @@ import os
 
 import httpx
 
-from .. import region
+from .. import USER_AGENT, region
 from ..errors import NetworkError
 
 _STORE_DETAILS = "https://store.steampowered.com/api/appdetails"
@@ -28,7 +28,7 @@ def _appdetails(appid: int, cc: str | None = None, lang: str | None = None) -> d
             resp = client.get(
                 _STORE_DETAILS,
                 params=region.store_params({"appids": appid, "cc": cc, "l": lang}),
-                headers={"User-Agent": "steam-cli/0.1"},
+                headers={"User-Agent": USER_AGENT},
             )
             resp.raise_for_status()
             data = resp.json()
@@ -70,7 +70,7 @@ def _itad_lookup(appid: int) -> str | None:
             resp = client.get(
                 _ITAD_LOOKUP,
                 params={"key": key, "appid": appid},
-                headers={"User-Agent": "steam-cli/0.1"},
+                headers={"User-Agent": USER_AGENT},
             )
             if resp.status_code in (401, 403):
                 return None
@@ -98,7 +98,7 @@ def price_history(appid: int, cc: str | None = None) -> dict | None:
                     "shops": str(_STEAM_SHOP_ID),
                 },
                 json=[itad_id],
-                headers={"User-Agent": "steam-cli/0.1"},
+                headers={"User-Agent": USER_AGENT},
             )
             resp.raise_for_status()
             data = resp.json()

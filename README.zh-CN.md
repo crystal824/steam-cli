@@ -221,7 +221,7 @@ pip install -e ".[dev]"
 ruff check src tests tools
 ruff format --check src tests tools
 mypy src
-PYTHONPATH=src python3 -m pytest -q
+PYTHONPATH=src python -m pytest -q
 ```
 
 这四道门禁就是 CI 跑的内容。只读功能可以放心打真实接口；写操作——尤其是 `activate`——

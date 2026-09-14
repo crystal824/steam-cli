@@ -8,7 +8,7 @@ from rich.console import Console
 from rich.table import Table
 
 from .. import auth
-from ..client import SteamClient
+from ..client import SteamClient, join_terms, resolve_appid
 from ..errors import NetworkError
 
 console = Console()
@@ -37,16 +37,19 @@ def _format_ts(ts: float | None) -> str:
 def register(app: typer.Typer) -> None:
     @app.command()
     def achievements(
-        appid: str,
+        appid: list[str],
         missing: bool = False,
         rarity: bool = False,
     ) -> None:
         """List your achievements for an app (requires a Web API key and login)."""
         steam_id = auth.require_steam_id()
         client = SteamClient()
+        resolved = str(resolve_appid(join_terms(appid)))
         try:
-            player = client.api.ISteamUserStats.GetPlayerAchievements(appid=appid, steamid=steam_id)
-            glob = client.api.ISteamUserStats.GetGlobalAchievementPercentagesForApp(gameid=appid)
+            player = client.api.ISteamUserStats.GetPlayerAchievements(
+                appid=resolved, steamid=steam_id
+            )
+            glob = client.api.ISteamUserStats.GetGlobalAchievementPercentagesForApp(gameid=resolved)
         except (requests.RequestException, ValueError) as exc:
             raise NetworkError(detail=str(exc))
 
@@ -75,7 +78,7 @@ def register(app: typer.Typer) -> None:
         if rarity:
             rows.sort(key=lambda r: _pct_value(r["percent"]))
 
-        table = Table(title=f"achievements: {appid}")
+        table = Table(title=f"achievements: {resolved}")
         table.add_column("Name")
         table.add_column("Achieved")
         table.add_column("Unlocked")

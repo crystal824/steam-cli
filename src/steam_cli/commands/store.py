@@ -9,17 +9,17 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from .. import auth, region
-from ..client import SteamClient, join_terms, resolve_appid
+from .. import USER_AGENT, region
+from ..client import SteamClient, join_terms, owned_games, resolve_appid
 from ..errors import NetworkError
 from ..utils.price import current_price, itad_available, price_history
+from .wishlist import wishlist_appids
 
 console = Console()
 
 _STORE_SEARCH = "https://store.steampowered.com/api/storesearch/"
 _STORE_DETAILS = "https://store.steampowered.com/api/appdetails"
-_WISHLIST = "https://store.steampowered.com/wishlist/profiles/{steamid}/wishlistdata/"
-_UA = "steam-cli/0.1"
+_UA = USER_AGENT
 
 
 def _get_json(url: str, params: dict | None = None) -> dict:
@@ -145,18 +145,19 @@ def register(app: typer.Typer) -> None:
             console.print("[dim]historical low unavailable; set STEAM_CLI_ITAD_KEY to enable[/dim]")
 
     @app.command()
-    def news(appid: str, count: int = 5) -> None:
+    def news(appid: list[str], count: int = 5) -> None:
         """Show recent news for an app (requires a Web API key)."""
         client = SteamClient()
+        resolved = str(resolve_appid(join_terms(appid)))
         try:
             resp = client.api.ISteamNews.GetNewsForApp(
-                appid=appid, count=count, maxlength=300, format="json"
+                appid=resolved, count=count, maxlength=300, format="json"
             )
         except (requests.RequestException, ValueError) as exc:
             raise NetworkError(detail=str(exc))
 
         items = (resp.get("appnews") or {}).get("newsitems", [])
-        table = Table(title=f"news: {appid}")
+        table = Table(title=f"news: {resolved}")
         table.add_column("Date")
         table.add_column("Title")
         table.add_column("Author")
@@ -174,41 +175,17 @@ def register(app: typer.Typer) -> None:
         library_never_played: bool = False,
     ) -> None:
         """Find sale items across your wishlist or unplayed library."""
-        steam_id = auth.require_steam_id()
-
         if not wishlist and not library_never_played:
             wishlist = True
 
         candidates: list[int] = []
 
         if wishlist:
-            session = auth.require_session()
-            try:
-                resp = session.get(
-                    _WISHLIST.format(steamid=steam_id),
-                    params={"p": 0},
-                    timeout=15,
-                )
-                resp.raise_for_status()
-                data = resp.json()
-            except (requests.RequestException, ValueError) as exc:
-                raise NetworkError(detail=str(exc))
-            for key in data:
-                if str(key).isdigit():
-                    candidates.append(int(key))
+            candidates.extend(wishlist_appids())
 
         if library_never_played:
             client = SteamClient()
-            try:
-                resp = client.api.IPlayerService.GetOwnedGames(
-                    steamid=steam_id,
-                    include_appinfo=1,
-                    include_played_free_games=1,
-                )
-            except (requests.RequestException, ValueError) as exc:
-                raise NetworkError(detail=str(exc))
-            games = (resp.get("response") or {}).get("games", [])
-            for game in games:
+            for game in owned_games(client):
                 if game.get("playtime_forever", 0) == 0:
                     appid = game.get("appid")
                     if appid is not None and appid not in candidates:
